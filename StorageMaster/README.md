@@ -4,6 +4,8 @@ Sort your inventory, lock slots, quick stack into nearby chests, and open **ever
 
 Everything looks and feels like Valheim's own UI, and the whole mod runs on your side only: it works on any server, and nobody else needs to install it.
 
+![The Storage window: your inventory next to every chest around you](https://raw.githubusercontent.com/Charming-Beaver/valheim-mods/main/StorageMaster/images/overview.jpg)
+
 ---
 
 ## Features
@@ -33,15 +35,33 @@ Everything looks and feels like Valheim's own UI, and the whole mod runs on your
 ### Storage window
 Opens every chest around you at once, next to your inventory, using the game's own item grids.
 
+![Hide inventory gives the chests the whole window](https://raw.githubusercontent.com/Charming-Beaver/valheim-mods/main/StorageMaster/images/hide-inventory.jpg)
+
 - **Move items freely** between your inventory and all chests:
   - **Click** to pick up and put down
   - **Shift + click** to take half a stack
   - **Ctrl + click** to send an item straight to you, or from you to a chest that already has it
   - **Esc** puts a carried item back
 - **Find item:** type a name and every matching slot in every chest lights up; the rest fade out.
+
+![Find item highlights every match in every chest](https://raw.githubusercontent.com/Charming-Beaver/valheim-mods/main/StorageMaster/images/find-item.jpg)
+
 - **Choose an item:** right-click any item to see how many you have in total, how many chests it's spread over, and where every stack is.
+
+![A chosen item: every stack lights up, with totals in the panel](https://raw.githubusercontent.com/Charming-Beaver/valheim-mods/main/StorageMaster/images/chosen-item.jpg)
+
 - **Gather here:** pulls all of the chosen item into one chest. Whatever doesn't fit flows into the next chests. Optionally it also takes them from your inventory (never from your hotbar or locked slots).
+
+| Before | After Gather here |
+|---|---|
+| ![Bone fragments spread over six chests](https://raw.githubusercontent.com/Charming-Beaver/valheim-mods/main/StorageMaster/images/gather-before.jpg) | ![All bone fragments in one chest](https://raw.githubusercontent.com/Charming-Beaver/valheim-mods/main/StorageMaster/images/gather-after.jpg) |
+
 - **Tidy up:** every item that's split over several chests moves into the chest that already holds the most of it. Then all chests get sorted.
+
+| Before | After Tidy up |
+|---|---|
+| ![Items scattered over many chests](https://raw.githubusercontent.com/Charming-Beaver/valheim-mods/main/StorageMaster/images/tidy-before.jpg) | ![Each item brought together and every chest sorted](https://raw.githubusercontent.com/Charming-Beaver/valheim-mods/main/StorageMaster/images/tidy-after.jpg) |
+
 - **Sort all**, plus **Sort** and **Take all** on each chest.
 - **Quick stack** into all the open chests at once.
 - **Name your chests:** click a chest's title to name it. The name appears when you look at the chest in the world. The **X** button removes it.
@@ -49,11 +69,15 @@ Opens every chest around you at once, next to your inventory, using the game's o
 - **Hide inventory:** gives the chests the whole window, so many more fit side by side on large screens.
 - **Settings:** choose how far away (5–50 m) and how many chests (4–60) the window opens. Up to **20 m and about 30 chests** is recommended.
 
+![The Settings popup](https://raw.githubusercontent.com/Charming-Beaver/valheim-mods/main/StorageMaster/images/settings.jpg)
+
 ### Name chests anywhere
 The title of the normal chest window (opened with **E**) is a text field too. Click it, type a name and press **Enter**. While you type, your keys only type: E won't close the chest and WASD won't move you.
 
 ### Info window
 The **Info** button next to your inventory explains every feature. It also lets you **change hotkeys** (with warnings when Valheim already uses a key) and adjust the main settings in game.
+
+![The Info window with clickable hotkeys](https://raw.githubusercontent.com/Charming-Beaver/valheim-mods/main/StorageMaster/images/info-window.jpg)
 
 ---
 

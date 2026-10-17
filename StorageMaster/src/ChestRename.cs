@@ -13,7 +13,7 @@ namespace StorageMaster
     /// </summary>
     public static class ChestRename
     {
-        private const float FieldW = 280f, FieldH = 38f, ResetSize = 34f;
+        private const float FieldW = 260f, FieldH = 38f, ResetSize = 28f;
 
         private static TMP_InputField _field;
         private static Button _reset;
@@ -48,8 +48,19 @@ namespace StorageMaster
             });
             UIKit.Tooltip(_field.gameObject, "Click to name this chest, then press Enter. The name shows when you look at it and in the Storage window.");
 
-            _reset = UIKit.Button(parent, "X", ResetName, ResetSize, ResetSize);
+            // The X sits inside the field's right end, so it never covers the game's buttons next to the title.
+            _reset = UIKit.Button(_field.transform, "X", ResetName, ResetSize, ResetSize);
             _reset.name = "StorageMaster_ResetName";
+            RectTransform reset = (RectTransform)_reset.transform;
+            reset.anchorMin = reset.anchorMax = reset.pivot = new Vector2(1f, 0.5f);
+            reset.anchoredPosition = new Vector2(-5f, 0f);
+            // Equal margins on both sides keep the centered name centered.
+            RectTransform area = _field.textViewport;
+            if (area != null)
+            {
+                area.offsetMin = new Vector2(ResetSize + 8f, area.offsetMin.y);
+                area.offsetMax = new Vector2(-(ResetSize + 8f), area.offsetMax.y);
+            }
             UIKit.Tooltip(_reset.gameObject, "Remove the name.");
         }
 
@@ -67,7 +78,7 @@ namespace StorageMaster
             if (EventSystem.current != null) EventSystem.current.SetSelectedGameObject(null);
         }
 
-        /// <summary>Centers the field on the game's title, wherever the title sits, with the reset button to its right.</summary>
+        /// <summary>Centers the field on the game's title, wherever the title sits.</summary>
         private static void Position(TMP_Text title)
         {
             RectTransform trt = title.rectTransform;
@@ -75,10 +86,6 @@ namespace StorageMaster
             rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0.5f, 0.5f);
             rt.sizeDelta = new Vector2(FieldW, FieldH);
             rt.position = trt.TransformPoint(trt.rect.center);
-
-            RectTransform reset = (RectTransform)_reset.transform;
-            reset.anchorMin = reset.anchorMax = reset.pivot = new Vector2(0.5f, 0.5f);
-            reset.position = rt.TransformPoint(new Vector3(FieldW / 2f + 6f + ResetSize / 2f, 0f, 0f));
         }
 
         [HarmonyPatch]
