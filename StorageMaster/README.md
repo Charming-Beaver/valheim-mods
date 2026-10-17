@@ -137,6 +137,10 @@ All settings live in `BepInEx/config/charmingbeaver.valheim.storagemaster.cfg`. 
 - Made for keyboard and mouse. Controllers aren't supported in the mod's windows.
 - Other mods that change the inventory screen or chest handling (sorting, auto-storing, quick stacking) may clash with this one. If something behaves oddly, try without them first.
 
+## Support
+
+If Storage Master saves you some chest-digging, you can buy me a coffee on [Ko-fi](https://ko-fi.com/charmingbeaver). It's completely optional and very appreciated.
+
 ## Issues and source
 
 Bug reports and ideas: [GitHub issues](https://github.com/Charming-Beaver/valheim-mods/issues).

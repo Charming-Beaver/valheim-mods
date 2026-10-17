@@ -20,6 +20,10 @@ The build copies the mod into `BepInEx/plugins/`. If Valheim isn't installed at 
 
 To package a release, run `.\package.ps1 StorageMaster` from the repo root. It builds the mod and writes `dist/StorageMaster-<version>.zip`.
 
+## Support
+
+If these mods make your game better, you can buy me a coffee on [Ko-fi](https://ko-fi.com/charmingbeaver). Thank you!
+
 ## License
 
 [MIT](LICENSE) © Charming Beaver
