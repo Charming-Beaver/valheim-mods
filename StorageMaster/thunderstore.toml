@@ -1,0 +1,25 @@
+# Used by .github/workflows/thunderstore.yml to upload the zip that package.ps1 builds.
+# The package contents (manifest.json, icon, README) come from the zip itself; this file only says
+# who publishes it and where it's listed (team, community, categories).
+[config]
+schemaVersion = "0.0.1"
+
+[package]
+namespace = "CharmingBeaver"
+name = "StorageMaster"
+versionNumber = "1.0.0"
+description = "See manifest.json in the package."
+websiteUrl = "https://github.com/Charming-Beaver/valheim-mods"
+containsNsfwContent = false
+[package.dependencies]
+
+[build]
+icon = "./icon.png"
+readme = "./README.md"
+outdir = "../dist"
+
+[publish]
+repository = "https://thunderstore.io"
+communities = [ "valheim", ]
+[publish.categories]
+valheim = [ "mods", "client-side", "utility", "tools", "crafting", "building", "gear", "misc", ]

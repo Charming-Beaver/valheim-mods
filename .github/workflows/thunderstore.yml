@@ -1,0 +1,68 @@
+# Uploads a mod to Thunderstore when its GitHub release is published.
+#
+# The game's DLLs can't be on GitHub, so the mod is built locally: release.ps1 builds both zips and creates the
+# release (as a draft). Publishing the release starts this workflow, which takes the Thunderstore zip
+# (<Team>-<Mod>-<version>.zip) from the release and uploads it with the TCLI_AUTH_TOKEN secret.
+# Release tags look like "storagemaster-v1.0.1"; the part before "-v" picks the mod folder.
+
+name: Publish to Thunderstore
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag to upload again, e.g. storagemaster-v1.0.1
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    env:
+      TAG: ${{ github.event.release.tag_name || inputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Find the mod for this release
+        id: mod
+        run: |
+          mod="${TAG%-v*}"
+          dir=""
+          for d in */; do
+            d="${d%/}"
+            if [ "${d,,}" = "$mod" ] && [ -f "$d/thunderstore.toml" ]; then dir="$d"; fi
+          done
+          if [ -z "$dir" ]; then
+            echo "No mod folder with thunderstore.toml matches tag $TAG, nothing to upload."
+          fi
+          echo "dir=$dir" >> "$GITHUB_OUTPUT"
+
+      - name: Download the Thunderstore zip from the release
+        if: steps.mod.outputs.dir != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p upload
+          gh release download "$TAG" --repo "${{ github.repository }}" --dir upload --pattern "*-${{ steps.mod.outputs.dir }}-*.zip"
+          ls -l upload
+
+      - uses: actions/setup-dotnet@v4
+        if: steps.mod.outputs.dir != ''
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Upload to Thunderstore
+        if: steps.mod.outputs.dir != ''
+        env:
+          TCLI_AUTH_TOKEN: ${{ secrets.TCLI_AUTH_TOKEN }}
+          # tcli is built for .NET 6/7; let it run on the newer runtime.
+          DOTNET_ROLL_FORWARD: Major
+        run: |
+          if [ -z "$TCLI_AUTH_TOKEN" ]; then echo "The TCLI_AUTH_TOKEN secret is missing."; exit 1; fi
+          dotnet tool install -g tcli --version 0.2.4
+          zip=$(ls upload/*.zip | head -n 1)
+          tcli publish --config-path "${{ steps.mod.outputs.dir }}/thunderstore.toml" --file "$zip" --token "$TCLI_AUTH_TOKEN"

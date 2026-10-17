@@ -18,7 +18,14 @@ dotnet build -c Release
 The build copies the mod into `BepInEx/plugins/`. If Valheim isn't installed at the default path, pass it in:
 `dotnet build -c Release -p:ValheimDir="C:\path\to\Valheim"`
 
-To package a release, run `.\package.ps1 StorageMaster` from the repo root. It builds the mod and writes `dist/StorageMaster-<version>.zip`.
+### Releasing
+
+1. Raise `Version` in the mod's `src/Plugin.cs` and add a section for it to its `CHANGELOG.md`. Commit and push.
+2. Run `.elease.ps1 StorageMaster`. It builds both zips (GitHub/Nexus and Thunderstore) and creates a **draft** GitHub release.
+3. Test the build in game, then publish the draft on GitHub. The **Publish to Thunderstore** workflow uploads it to Thunderstore.
+4. Upload `dist/StorageMaster-<version>.zip` to Nexus by hand.
+
+`.\package.ps1 StorageMaster` only builds the zips, without making a release.
 
 ## Support
 
