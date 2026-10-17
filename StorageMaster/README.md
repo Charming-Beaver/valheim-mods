@@ -141,6 +141,8 @@ All settings live in `BepInEx/config/charmingbeaver.valheim.storagemaster.cfg`. 
 
 If Storage Master saves you some chest-digging, you can buy me a coffee on [Ko-fi](https://ko-fi.com/charmingbeaver). It's completely optional and very appreciated.
 
+[![Support me on Ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/charmingbeaver)
+
 ## Issues and source
 
 Bug reports and ideas: [GitHub issues](https://github.com/Charming-Beaver/valheim-mods/issues).

@@ -24,6 +24,8 @@ To package a release, run `.\package.ps1 StorageMaster` from the repo root. It b
 
 If these mods make your game better, you can buy me a coffee on [Ko-fi](https://ko-fi.com/charmingbeaver). Thank you!
 
+[![Support me on Ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/charmingbeaver)
+
 ## License
 
 [MIT](LICENSE) © Charming Beaver
