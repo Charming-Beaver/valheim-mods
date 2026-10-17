@@ -1,0 +1,6 @@
+<Project>
+  <!-- Where Valheim is installed. Override with: dotnet build -p:ValheimDir="C:\path\to\Valheim" -->
+  <PropertyGroup>
+    <ValheimDir Condition="'$(ValheimDir)' == ''">D:\SteamLibrary\steamapps\common\Valheim</ValheimDir>
+  </PropertyGroup>
+</Project>
