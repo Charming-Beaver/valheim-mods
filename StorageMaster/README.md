@@ -1,0 +1,116 @@
+# Storage Master
+
+Sort your inventory, lock slots, quick stack into nearby chests, and open **every chest around you in one window** to move, find, gather and tidy up your stuff.
+
+Everything looks and feels like Valheim's own UI, and the whole mod runs on your side only: it works on any server, and nobody else needs to install it.
+
+---
+
+## Features
+
+### Inventory sorting
+- A **Sort** button next to your inventory tidies everything **below the hotbar**. Your hotbar row is never moved.
+- Partial stacks of the same item are merged first, so three stacks of 30 wood become one stack of 90.
+- **By: …** switches what Sort orders by:
+  - **Name A–Z** and **Name Z–A**
+  - **Type**: weapons, ammo, armor, tools, food, materials, trophies
+  - **Quality**: best first
+  - **Weight**: heaviest first
+  - **Amount**: biggest stacks first
+- **Sort chest** appears next to any chest you open and sorts it the same way.
+- **Auto-sort** (optional) sorts your inventory every time you pick something up.
+
+### Locked slots
+- **Alt + click** a slot in your inventory to lock it. Locked slots are tinted orange and get a small lock badge.
+- Sort, auto-sort and quick stack never touch locked slots, and neither does the game's own **Place stacks** button.
+- Locks are saved with your character.
+
+### Quick stack
+- One click (or a hotkey) puts your items into **nearby chests that already hold the same kind of item**.
+- Your hotbar, equipped gear and locked slots always stay with you.
+- A short summary shows how many items went into how many chests.
+
+### Storage window
+Opens every chest around you at once, next to your inventory, using the game's own item grids.
+
+- **Move items freely** between your inventory and all chests:
+  - **Click** to pick up and put down
+  - **Shift + click** to take half a stack
+  - **Ctrl + click** to send an item straight to you, or from you to a chest that already has it
+  - **Esc** puts a carried item back
+- **Find item:** type a name and every matching slot in every chest lights up; the rest fade out.
+- **Choose an item:** right-click any item to see how many you have in total, how many chests it's spread over, and where every stack is.
+- **Gather here:** pulls all of the chosen item into one chest. Whatever doesn't fit flows into the next chests. Optionally it also takes them from your inventory (never from your hotbar or locked slots).
+- **Tidy up:** every item that's split over several chests moves into the chest that already holds the most of it. Then all chests get sorted.
+- **Sort all**, plus **Sort** and **Take all** on each chest.
+- **Quick stack** into all the open chests at once.
+- **Name your chests:** click a chest's title to name it. The name appears when you look at the chest in the world. The **X** button removes it.
+- **Skip a chest:** tick **Skip** on a chest (for example your friend's) and Quick stack, Gather, Tidy up and Sort all will leave it alone. You can still move items by hand. Only you see this setting.
+- **Hide inventory:** gives the chests the whole window, so many more fit side by side on large screens.
+- **Settings:** choose how far away (5–50 m) and how many chests (4–60) the window opens. Up to **20 m and about 30 chests** is recommended.
+
+### Name chests anywhere
+The title of the normal chest window (opened with **E**) is a text field too. Click it, type a name and press **Enter**. While you type, your keys only type: E won't close the chest and WASD won't move you.
+
+### Info window
+The **Info** button next to your inventory explains every feature. It also lets you **change hotkeys** (with warnings when Valheim already uses a key) and adjust the main settings in game.
+
+---
+
+## Hotkeys
+
+| Action | Default |
+|---|---|
+| Open the Storage window | `Shift + F1` |
+| Sort inventory | `Shift + F4` |
+| Quick stack | `Shift + F3` |
+| Auto-sort on / off | not set |
+| Info window | not set |
+| Lock / unlock a slot | `Alt + click` |
+
+Change them in the **Info** window. Click a key, then press the new one; Esc cancels and Backspace removes the key. You can also edit them in the config file.
+
+---
+
+## Multiplayer
+
+- **Client-side only.** The server and other players don't need the mod.
+- **Safe with other players.** Before touching a chest, Storage Master asks for it the same way the game's own **Place stacks** button does. The chest is handed over properly, and chests someone else has open are skipped ("In use by someone else").
+- While the Storage window is open, the chests it shows count as **in use**, just like a normal open chest. Close the window and they're free again.
+- Chest names are stored on the chest itself, so everyone with the mod sees them. **Skip** and **locked slots** are personal and saved with your character.
+- Respects wards: you only see chests you're allowed to open. Tombstones are never touched.
+
+---
+
+## Installation
+
+**With a mod manager (recommended):** install through r2modman or Thunderstore Mod Manager. BepInEx is installed automatically.
+
+**Manually:**
+1. Install [BepInExPack for Valheim](https://thunderstore.io/c/valheim/p/denikson/BepInExPack_Valheim/).
+2. Copy `StorageMaster.dll` into `Valheim/BepInEx/plugins/StorageMaster/`.
+3. Start the game.
+
+## Configuration
+
+All settings live in `BepInEx/config/charmingbeaver.valheim.storagemaster.cfg`. Most of them can also be changed in game from the **Info** window and the Storage window's **Settings**.
+
+| Section | Setting | Default | |
+|---|---|---|---|
+| Sorting | SortMode | NameAsc | What Sort orders by |
+| Sorting | AutoSort | false | Sort on every pickup |
+| QuickStack | Range | 10 | Meters around you |
+| QuickStack | SkipHotbar | true | Keep the hotbar out of quick stack |
+| Storage | Range | 15 | Meters around you |
+| Storage | MaxChests | 24 | Nearest chests first |
+| Storage | ShowInventory | true | Show your inventory in the Storage window |
+
+## Compatibility
+
+- Made for keyboard and mouse. Controllers aren't supported in the mod's windows.
+- Other mods that change the inventory screen or chest handling (sorting, auto-storing, quick stacking) may clash with this one. If something behaves oddly, try without them first.
+
+## Issues and source
+
+Bug reports and ideas: [GitHub issues](https://github.com/Charming-Beaver/valheim-mods/issues).
+Source code: [Charming-Beaver/valheim-mods](https://github.com/Charming-Beaver/valheim-mods), [MIT licensed](../LICENSE).
