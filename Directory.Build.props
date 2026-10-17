@@ -6,6 +6,8 @@
   <!-- Keep local paths (like your Windows user folder) out of the built DLL. -->
   <PropertyGroup>
     <Deterministic>true</Deterministic>
+    <!-- Harmless: the game's DLLs reference slightly different .NET versions than netstandard2.1. -->
+    <MSBuildWarningsAsMessages>$(MSBuildWarningsAsMessages);MSB3277</MSBuildWarningsAsMessages>
     <PathMap>$(MSBuildThisFileDirectory)=./</PathMap>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)' == 'Release'">

@@ -21,3 +21,5 @@ The build copies the mod into `BepInEx/plugins/`. If Valheim isn't installed at 
 ## License
 
 [MIT](LICENSE) © Charming Beaver
+
+Packaging a release: `.\package.ps1 StorageMaster` builds it and writes `dist/StorageMaster-<version>.zip`.
