@@ -150,4 +150,4 @@ If Storage Master saves you some chest-digging, you can buy me a coffee on [Ko-f
 ## Issues and source
 
 Bug reports and ideas: [GitHub issues](https://github.com/Charming-Beaver/valheim-mods/issues).
-Source code: [Charming-Beaver/valheim-mods](https://github.com/Charming-Beaver/valheim-mods), [MIT licensed](../LICENSE).
+Source code: [Charming-Beaver/valheim-mods](https://github.com/Charming-Beaver/valheim-mods), [MIT licensed](https://github.com/Charming-Beaver/valheim-mods/blob/main/LICENSE).

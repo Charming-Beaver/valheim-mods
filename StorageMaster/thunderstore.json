@@ -1,0 +1,7 @@
+{
+  "description": "Every nearby chest in one window: move, search, gather and tidy up items. Plus inventory sorting that keeps your hotbar, locked slots, quick stack, chest names and Skip for friends' chests. Client-side only.",
+  "website_url": "https://github.com/Charming-Beaver/valheim-mods",
+  "dependencies": [
+    "denikson-BepInExPack_Valheim-5.4.2351"
+  ]
+}

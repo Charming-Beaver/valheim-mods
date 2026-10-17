@@ -1,12 +1,15 @@
 <#
 .SYNOPSIS
-    Builds a mod in Release and packs it into dist\<Mod>-<version>.zip, ready for GitHub releases and Nexus Mods.
+    Builds a mod in Release and packs dist\<Mod>-<version>.zip (GitHub releases, Nexus Mods) and, when the mod has
+    thunderstore.json and icon.png, dist\<Team>-<Mod>-<version>.zip for Thunderstore.
 
 .EXAMPLE
     .\package.ps1 StorageMaster
 #>
 param(
-    [Parameter(Mandatory = $true)][string]$Mod
+    [Parameter(Mandatory = $true)][string]$Mod,
+    # Thunderstore team name (letters, digits and _ only).
+    [string]$Team = 'CharmingBeaver'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -50,3 +53,51 @@ finally {
 }
 
 Write-Host "Packed $zipPath"
+
+# Thunderstore: manifest.json, icon.png, README.md and CHANGELOG.md at the root, the DLL in plugins/.
+# Mod managers install plugins/ into BepInEx/plugins/<Team>-<Mod>/.
+$tsInfoPath = Join-Path $project 'thunderstore.json'
+$icon = Join-Path $project 'icon.png'
+if (-not (Test-Path $tsInfoPath)) {
+    Write-Host "No thunderstore.json, skipping the Thunderstore package"
+    return
+}
+if (-not (Test-Path $icon)) {
+    Write-Warning "No icon.png (256x256) in $project, skipping the Thunderstore package"
+    return
+}
+$tsInfo = Get-Content $tsInfoPath -Raw | ConvertFrom-Json
+if ($tsInfo.description.Length -gt 250) { throw "Thunderstore description is $($tsInfo.description.Length) characters, the limit is 250" }
+$manifest = [ordered]@{
+    name           = $Mod
+    version_number = $version
+    website_url    = $tsInfo.website_url
+    description    = $tsInfo.description
+    dependencies   = @($tsInfo.dependencies)
+}
+$manifestJson = $manifest | ConvertTo-Json -Depth 3
+
+$tsZipPath = Join-Path $dist "$Team-$Mod-$version.zip"
+if (Test-Path $tsZipPath) { Remove-Item $tsZipPath }
+$zip = [System.IO.Compression.ZipFile]::Open($tsZipPath, 'Create')
+try {
+    $entry = $zip.CreateEntry('manifest.json')
+    $writer = New-Object System.IO.StreamWriter($entry.Open(), (New-Object System.Text.UTF8Encoding($false)))
+    $writer.Write($manifestJson)
+    $writer.Dispose()
+    $files = [ordered]@{
+        'icon.png'           = $icon
+        'README.md'          = (Join-Path $project 'README.md')
+        'CHANGELOG.md'       = (Join-Path $project 'CHANGELOG.md')
+        "plugins/$Mod.dll"   = $dll
+    }
+    foreach ($name in $files.Keys) {
+        if (Test-Path $files[$name]) {
+            [System.IO.Compression.ZipFileExtensions]::CreateEntryFromFile($zip, $files[$name], $name) | Out-Null
+        }
+    }
+}
+finally {
+    $zip.Dispose()
+}
+Write-Host "Packed $tsZipPath"
