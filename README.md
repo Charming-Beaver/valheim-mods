@@ -18,8 +18,8 @@ dotnet build -c Release
 The build copies the mod into `BepInEx/plugins/`. If Valheim isn't installed at the default path, pass it in:
 `dotnet build -c Release -p:ValheimDir="C:\path\to\Valheim"`
 
+To package a release, run `.\package.ps1 StorageMaster` from the repo root. It builds the mod and writes `dist/StorageMaster-<version>.zip`.
+
 ## License
 
 [MIT](LICENSE) © Charming Beaver
-
-Packaging a release: `.\package.ps1 StorageMaster` builds it and writes `dist/StorageMaster-<version>.zip`.
