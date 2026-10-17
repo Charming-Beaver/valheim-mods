@@ -15,7 +15,13 @@ namespace StorageMaster
         public static void Ensure()
         {
             InventoryGui gui = InventoryGui.instance;
-            if (gui == null || gui.m_player == null || _sort != null || !UIKit.Init()) return;
+            if (gui == null || gui.m_player == null) return;
+            if (_sort != null)
+            {
+                if (InventoryGui.IsVisible()) Reposition(gui);
+                return;
+            }
+            if (!UIKit.Init()) return;
 
             _sort = Make(gui.m_player, "Sort", () => Sorter.SortPlayer(silent: false), 0,
                 "Sorts everything below the hotbar and merges partial stacks.\nAlt + click a slot to lock it, so Sort leaves it alone.");
@@ -33,6 +39,52 @@ namespace StorageMaster
                     "Sorts this chest (merging partial stacks) using the same order as your inventory.");
             }
             Refresh();
+            Reposition(gui);
+        }
+
+        /// <summary>
+        /// The armor and weight boxes stick out to the right of the inventory panel (and the weight box of the chest panel),
+        /// so the buttons start just after them instead of covering them.
+        /// </summary>
+        private static void Reposition(InventoryGui gui)
+        {
+            float x = Gap + OverhangRight(gui.m_player, gui.m_armor, gui.m_weight);
+            foreach (Button b in new[] { _sort, _mode, _quickStack, _autoSort, _storage, _info })
+            {
+                if (b == null) continue;
+                RectTransform rt = (RectTransform)b.transform;
+                rt.anchoredPosition = new Vector2(x, rt.anchoredPosition.y);
+            }
+            if (_sortChest != null && gui.m_container != null)
+            {
+                RectTransform rt = (RectTransform)_sortChest.transform;
+                rt.anchoredPosition = new Vector2(Gap + OverhangRight(gui.m_container, gui.m_containerWeight), rt.anchoredPosition.y);
+            }
+        }
+
+        private static readonly Vector3[] _corners = new Vector3[4];
+
+        /// <summary>How far (in the panel's units) the boxes holding these texts reach past the panel's right edge.</summary>
+        private static float OverhangRight(RectTransform panel, params TMPro.TMP_Text[] texts)
+        {
+            panel.GetWorldCorners(_corners);
+            float panelRight = panel.InverseTransformPoint(_corners[2]).x;
+            float overhang = 0f;
+            foreach (TMPro.TMP_Text text in texts)
+            {
+                if (text == null || !text.gameObject.activeInHierarchy) continue;
+                // The text itself, in case its box isn't inside the panel.
+                text.rectTransform.GetWorldCorners(_corners);
+                overhang = Mathf.Max(overhang, panel.InverseTransformPoint(_corners[2]).x - panelRight + 10f);
+                // The text's box is its ancestor that sits directly in the panel.
+                Transform box = text.transform;
+                while (box.parent != null && box.parent != panel) box = box.parent;
+                if (box.parent != panel || !(box is RectTransform boxRt)) continue;
+                boxRt.GetWorldCorners(_corners);
+                float right = panel.InverseTransformPoint(_corners[2]).x;
+                overhang = Mathf.Max(overhang, right - panelRight);
+            }
+            return overhang;
         }
 
         public static void Refresh()
@@ -47,7 +99,7 @@ namespace StorageMaster
             RectTransform rt = (RectTransform)b.transform;
             rt.anchorMin = rt.anchorMax = new Vector2(1, 1);
             rt.pivot = new Vector2(0, 1);
-            rt.anchoredPosition = new Vector2(8, -index * (ButtonH + Gap));
+            rt.anchoredPosition = new Vector2(Gap, -index * (ButtonH + Gap));
             UIKit.Tooltip(b.gameObject, tooltip);
             return b;
         }
