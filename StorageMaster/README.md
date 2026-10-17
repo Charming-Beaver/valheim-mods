@@ -4,6 +4,8 @@ Sort your inventory, lock slots, quick stack into nearby chests, and open **ever
 
 Everything looks and feels like Valheim's own UI, and the whole mod runs on your side only: it works on any server, and nobody else needs to install it.
 
+**Download:** [Nexus Mods](https://www.nexusmods.com/valheim/mods/4479) · [GitHub releases](https://github.com/Charming-Beaver/valheim-mods/releases/tag/storagemaster-v1.0.0)
+
 ![The Storage window: your inventory next to every chest around you](https://raw.githubusercontent.com/Charming-Beaver/valheim-mods/main/StorageMaster/images/overview.jpg)
 
 ---
@@ -111,7 +113,9 @@ Change them in the **Info** window. Click a key, then press the new one; Esc can
 
 ## Installation
 
-**With a mod manager (recommended):** install through r2modman or Thunderstore Mod Manager. BepInEx is installed automatically.
+**With Vortex:** click **Mod Manager Download** on the [Nexus page](https://www.nexusmods.com/valheim/mods/4479).
+
+**With r2modman or Thunderstore Mod Manager:** install it from there; BepInEx is installed automatically.
 
 **Manually:**
 1. Install [BepInExPack for Valheim](https://thunderstore.io/c/valheim/p/denikson/BepInExPack_Valheim/).

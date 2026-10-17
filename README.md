@@ -4,7 +4,7 @@ Client-side [BepInEx](https://github.com/BepInEx/BepInEx) mods for Valheim.
 
 | Mod | What it does |
 |---|---|
-| [Storage Master](StorageMaster) | Inventory sorting, locked slots, quick stack and a window that opens every nearby chest at once to move, find, gather and tidy up items. |
+| [Storage Master](StorageMaster) ([Nexus](https://www.nexusmods.com/valheim/mods/4479)) | Inventory sorting, locked slots, quick stack and a window that opens every nearby chest at once to move, find, gather and tidy up items. |
 
 ## Building
 
