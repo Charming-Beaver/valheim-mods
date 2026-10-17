@@ -11,6 +11,9 @@ Everything looks and feels like Valheim's own UI, and the whole mod runs on your
 ## Features
 
 ### Inventory sorting
+
+![The buttons next to your inventory, and naming a chest in the normal chest window](https://raw.githubusercontent.com/Charming-Beaver/valheim-mods/main/StorageMaster/images/inventory-buttons.jpg)
+
 - A **Sort** button next to your inventory tidies everything **below the hotbar**. Your hotbar row is never moved.
 - Partial stacks of the same item are merged first, so three stacks of 30 wood become one stack of 90.
 - **By: …** switches what Sort orders by:
