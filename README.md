@@ -17,3 +17,7 @@ dotnet build -c Release
 
 The build copies the mod into `BepInEx/plugins/`. If Valheim isn't installed at the default path, pass it in:
 `dotnet build -c Release -p:ValheimDir="C:\path\to\Valheim"`
+
+## License
+
+[MIT](LICENSE) © Charming Beaver
