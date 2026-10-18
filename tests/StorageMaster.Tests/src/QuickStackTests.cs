@@ -73,6 +73,23 @@ namespace StorageMaster.Tests
             Assert.Equal(1, Count(far.GetInventory(), "Wood"), "Wood in the far chest");
         }
 
+        /// <summary>A second press that finds nothing to do doesn't wipe the first press's summary (#12).</summary>
+        [Test]
+        private static IEnumerator PressingTwiceKeepsTheFirstSummary()
+        {
+            Container chest = SpawnChest();
+            Put(chest.GetInventory(), "Wood", 1, 0, 0);
+            Put(Mine, "Wood", 20, 2, 2);
+
+            QuickStack.Run();
+            yield return WaitUntil(() => Count(chest.GetInventory(), "Wood") == 21, "21 wood in the chest");
+            QuickStack.Run();
+            yield return WaitUntil(() => QuickStack._reportAt < 0f, "the quick stack summary");
+
+            string shown = MessageHud.instance.m_messageCenterText.text;
+            Assert.True(shown.StartsWith("Quick stacked 20 items into 1 chest"), $"Summary shown: \"{shown}\"");
+        }
+
         /// <summary>The game's own "Place stacks" button keeps locked slots too (but not the hotbar).</summary>
         [Test]
         private static void PlaceStacksKeepsLockedSlots()
