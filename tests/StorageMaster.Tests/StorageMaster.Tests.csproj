@@ -1,0 +1,45 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <AssemblyName>StorageMaster.Tests</AssemblyName>
+    <RootNamespace>StorageMaster.Tests</RootNamespace>
+    <LangVersion>latest</LangVersion>
+    <Nullable>disable</Nullable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <CopyLocalLockFileAssemblies>false</CopyLocalLockFileAssemblies>
+    <!-- CS0436: the mod and the tests both get the publicizer's access-check attribute. -->
+    <NoWarn>$(NoWarn);CS0649;CS0169;CS0414;CS0618;CS0436</NoWarn>
+    <ManagedDir>$(ValheimDir)\valheim_Data\Managed</ManagedDir>
+    <BepInExDir>$(ValheimDir)\BepInEx</BepInExDir>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Krafs.Publicizer" Version="2.2.1">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <Publicize Include="assembly_valheim" />
+    <Publicize Include="assembly_utils" />
+    <!-- Tests reach into the mod's private state (open chests, chosen item, cached locks). -->
+    <Publicize Include="StorageMaster" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Building the tests also builds the mod, which installs itself into BepInEx/plugins. -->
+    <ProjectReference Include="..\..\StorageMaster\StorageMaster.csproj" Private="false" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="$(BepInExDir)\core\BepInEx.dll" Private="false" />
+    <Reference Include="$(BepInExDir)\core\0Harmony.dll" Private="false" />
+    <Reference Include="$(ManagedDir)\assembly_valheim.dll" Private="false" />
+    <Reference Include="$(ManagedDir)\assembly_utils.dll" Private="false" />
+    <Reference Include="$(ManagedDir)\assembly_guiutils.dll" Private="false" />
+    <Reference Include="$(ManagedDir)\UnityEngine.dll" Private="false" />
+    <Reference Include="$(ManagedDir)\UnityEngine.CoreModule.dll" Private="false" />
+    <Reference Include="$(ManagedDir)\UnityEngine.ScreenCaptureModule.dll" Private="false" />
+    <Reference Include="$(ManagedDir)\UnityEngine.UI.dll" Private="false" />
+    <Reference Include="$(ManagedDir)\UnityEngine.UIModule.dll" Private="false" />
+    <Reference Include="$(ManagedDir)\Unity.TextMeshPro.dll" Private="false" />
+  </ItemGroup>
+</Project>

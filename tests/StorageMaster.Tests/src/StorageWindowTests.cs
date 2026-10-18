@@ -1,0 +1,158 @@
+using System.Collections;
+using System.Linq;
+using StorageMaster.UI;
+using static StorageMaster.Tests.TestKit;
+
+namespace StorageMaster.Tests
+{
+    public static class StorageWindowTests
+    {
+        [Test]
+        private static IEnumerator OpenClaimsNearbyChestsAndCloseReleasesThem()
+        {
+            Container a = SpawnChest(3f, 0f), b = SpawnChest(4f, 60f), c = SpawnChest(5f, 120f);
+            Container far = SpawnChest(Plugin.StorageRange.Value + 3f, 180f);
+            Put(a.GetInventory(), "Wood", 10, 0, 0);
+            Put(b.GetInventory(), "Stone", 10, 0, 0);
+            Put(Mine, "Resin", 5, 2, 2);
+
+            yield return OpenAndWait();
+
+            Assert.Equal(3, StorageWindow._cards.Count, "Chests in the window");
+            Assert.True(StorageWindow._cards.All(card => card.Chest != far), "The chest out of range isn't in the window");
+            Assert.Equal("a,b,c", string.Join(",", StorageWindow._cards.Select(card => card.Chest == a ? "a" : card.Chest == b ? "b" : "c")),
+                "Nearest first");
+            Assert.True(a.IsInUse() && b.IsInUse() && c.IsInUse(), "Chests are in use while the window is open");
+            yield return Screenshot("storage-window");
+
+            StorageWindow.Close();
+            yield return null;
+            Assert.True(!a.IsInUse() && !b.IsInUse() && !c.IsInUse(), "Chests are free again after closing");
+        }
+
+        [Test]
+        private static IEnumerator OpensOnlyMaxChests()
+        {
+            Plugin.StorageMaxChests.Value = 2;
+            Container a = SpawnChest(3f, 0f), b = SpawnChest(4f, 90f);
+            SpawnChest(5f, 180f);
+
+            yield return OpenAndWait();
+
+            Assert.Equal(2, StorageWindow._cards.Count, "Chests in the window");
+            Assert.True(StorageWindow._cards.Any(card => card.Chest == a) && StorageWindow._cards.Any(card => card.Chest == b), "The two nearest chests");
+        }
+
+        [Test]
+        private static IEnumerator GatherHereCollectsFromChestsAndMe()
+        {
+            Container a = SpawnChest(3f, 0f), b = SpawnChest(4f, 90f), c = SpawnChest(5f, 180f);
+            Put(a.GetInventory(), "Stone", 1, 0, 0);
+            Put(b.GetInventory(), "Wood", 10, 0, 0);
+            Put(c.GetInventory(), "Wood", 15, 3, 1);
+            Put(Mine, "Wood", 5, 2, 2);
+            Put(Mine, "Wood", 4, 0, 0);
+
+            yield return OpenAndWait();
+            Gather("Wood", a, includeMe: true);
+
+            Assert.Equal(30, Count(a.GetInventory(), "Wood"), "Wood in the chosen chest");
+            Assert.Equal(0, Count(b.GetInventory(), "Wood") + Count(c.GetInventory(), "Wood"), "Wood left in the other chests");
+            Assert.Equal(4, Count(Mine, "Wood"), "Wood left on me (only the hotbar)");
+        }
+
+        [Test]
+        private static IEnumerator GatherHereCanLeaveMyInventoryAlone()
+        {
+            Container a = SpawnChest(3f, 0f), b = SpawnChest(4f, 90f);
+            Put(b.GetInventory(), "Wood", 10, 0, 0);
+            Put(Mine, "Wood", 5, 2, 2);
+
+            yield return OpenAndWait();
+            Gather("Wood", a, includeMe: false);
+
+            Assert.Equal(10, Count(a.GetInventory(), "Wood"), "Wood in the chosen chest");
+            Assert.Equal(5, Count(Mine, "Wood"), "Wood left on me");
+        }
+
+        [Test]
+        private static IEnumerator GatherHereSkipsChestsMarkedSkip()
+        {
+            Container a = SpawnChest(3f, 0f), b = SpawnChest(4f, 90f), c = SpawnChest(5f, 180f);
+            Put(b.GetInventory(), "Wood", 10, 0, 0);
+            Put(c.GetInventory(), "Wood", 15, 0, 0);
+            Exclusions.Set(b, true);
+
+            yield return OpenAndWait();
+            Gather("Wood", a, includeMe: false);
+
+            Assert.Equal(15, Count(a.GetInventory(), "Wood"), "Wood in the chosen chest");
+            Assert.Equal(10, Count(b.GetInventory(), "Wood"), "Wood in the skipped chest");
+        }
+
+        [Test]
+        private static IEnumerator GatherHereOverflowsIntoTheNextChest()
+        {
+            Container a = SpawnChest(3f, 0f), b = SpawnChest(4f, 90f), c = SpawnChest(5f, 180f);
+            Inventory inv = a.GetInventory();
+            int free = inv.GetWidth() * inv.GetHeight() - 1;
+            for (int i = 0; i < free; i++) Put(inv, "Stone", 50, (i + 1) % inv.GetWidth(), (i + 1) / inv.GetWidth());
+            Put(c.GetInventory(), "Wood", 50, 0, 0);
+            Put(c.GetInventory(), "Wood", 50, 1, 0);
+            Put(c.GetInventory(), "Wood", 50, 2, 0);
+
+            yield return OpenAndWait();
+            Gather("Wood", a, includeMe: false);
+
+            Assert.Equal(50, Count(a.GetInventory(), "Wood"), "Wood in the chosen chest (one free slot)");
+            Assert.Equal(100, Count(b.GetInventory(), "Wood"), "Wood that overflowed into the next chest");
+            Assert.Equal(0, Count(c.GetInventory(), "Wood"), "Wood left where it was");
+        }
+
+        [Test]
+        private static IEnumerator TidyUpBringsSpreadItemsTogetherAndSorts()
+        {
+            Container a = SpawnChest(3f, 0f), b = SpawnChest(4f, 90f), c = SpawnChest(5f, 180f);
+            Put(a.GetInventory(), "Wood", 30, 4, 1);
+            Put(b.GetInventory(), "Wood", 5, 0, 0);
+            Put(b.GetInventory(), "Stone", 20, 2, 1);
+            Put(c.GetInventory(), "Stone", 3, 1, 0);
+            Put(c.GetInventory(), "Resin", 7, 3, 1);
+
+            yield return OpenAndWait();
+            StorageWindow.TidyUp();
+
+            Assert.Equal(35, Count(a.GetInventory(), "Wood"), "All wood in the chest that had the most");
+            Assert.Equal(23, Count(b.GetInventory(), "Stone"), "All stone in the chest that had the most");
+            Assert.Equal(7, Count(c.GetInventory(), "Resin"), "Resin stays");
+            Assert.Equal(0, Count(b.GetInventory(), "Wood") + Count(c.GetInventory(), "Stone"), "Nothing left behind");
+            foreach (Container chest in new[] { a, b, c })
+            {
+                var items = InReadingOrder(chest.GetInventory());
+                for (int i = 0; i < items.Count; i++)
+                {
+                    Assert.Equal(new Vector2i(i % chest.GetInventory().GetWidth(), i / chest.GetInventory().GetWidth()), items[i].m_gridPos,
+                        $"Sorted chest, item {i + 1}");
+                }
+            }
+        }
+
+        // ------------------------------------------------------------------ helpers
+
+        private static IEnumerator OpenAndWait()
+        {
+            StorageWindow.Open();
+            Assert.True(StorageWindow.IsOpen, "Storage window open");
+            yield return WaitUntil(() => StorageWindow._cards.All(card => card.Claimed), "every chest in the window to open");
+        }
+
+        /// <summary>Chooses an item and clicks Gather here on a chest's card.</summary>
+        private static void Gather(string prefab, Container into, bool includeMe)
+        {
+            StorageWindow._selected = Name(prefab);
+            StorageWindow._includeMe.isOn = includeMe;
+            StorageWindow.Card card = StorageWindow._cards.First(c => c.Chest == into);
+            StorageWindow.GatherInto(card);
+        }
+    }
+}

@@ -33,6 +33,9 @@ Link related issues both ways:
 ### Screenshots
 `gh` can't upload images to issues. The maintainer uploads them manually, so after creating issues, give a list of which screenshot goes in which issue.
 
+## Testing
+In-game tests live in `tests/<Mod>.Tests/` (lowercase `tests`, so it isn't mistaken for a mod folder). Run them with `.\tests\run-tests.ps1 <Mod>` after changing a mod: it builds, starts Valheim, prints PASS/FAIL per test and exits non-zero on failure. Look at the screenshots it lists to check UI changes. Tests are static methods marked `[Test]` (void or `IEnumerator` to wait for frames), using the helpers in `TestKit.cs`. Each test starts from a clean state (no test chests, empty inventory, default settings).
+
 ## Adding a new mod
 1. Create the mod folder (its name becomes the mod ID).
 2. Create the `mod: <FolderName>` label.
