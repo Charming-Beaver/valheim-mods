@@ -1,0 +1,34 @@
+name: Feature request
+description: An idea for a new feature, or support for another mod
+labels: ["enhancement"]
+body:
+  # The "mod: <answer>" label is added automatically by .github/workflows/label-mod.yml.
+  # When adding a mod, add its folder name here, to bug_report.yml and create the "mod: <FolderName>" label.
+  - type: dropdown
+    id: mod
+    attributes:
+      label: Which mod?
+      options:
+        - StorageMaster
+    validations:
+      required: true
+
+  - type: textarea
+    id: request
+    attributes:
+      label: What would you like?
+      description: Describe the feature, or which mod it should work with.
+    validations:
+      required: true
+
+  - type: textarea
+    id: why
+    attributes:
+      label: Why would it help?
+      description: How you play, or what problem it solves for you.
+
+  - type: textarea
+    id: mods
+    attributes:
+      label: Other installed mods
+      description: Helpful if the request is about working with another mod or UI overhaul.
