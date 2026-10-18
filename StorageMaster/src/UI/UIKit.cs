@@ -324,7 +324,8 @@ namespace StorageMaster.UI
             scroll.horizontal = false;
             scroll.vertical = true;
             scroll.movementType = ScrollRect.MovementType.Clamped;
-            scroll.scrollSensitivity = 40f;
+            // Valheim reports a mouse wheel notch as 0.05, so this is 150 px per notch, like the game's own lists.
+            scroll.scrollSensitivity = 3000f;
 
             RectTransform viewport = Rect(root, "viewport").Anchor(0, 0, 1, 1, 0, 0, 16, 0);
             Image vpImg = viewport.gameObject.AddComponent<Image>();

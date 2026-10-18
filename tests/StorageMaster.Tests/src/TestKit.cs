@@ -4,6 +4,9 @@ using System.IO;
 using System.Linq;
 using StorageMaster.UI;
 using UnityEngine;
+using UnityEngine.EventSystems;
+using UnityEngine.InputSystem.UI;
+using UnityEngine.UI;
 
 namespace StorageMaster.Tests
 {
@@ -132,6 +135,21 @@ namespace StorageMaster.Tests
         public static IEnumerator Frames(int count)
         {
             for (int i = 0; i < count; i++) yield return null;
+        }
+
+        /// <summary>Turns the mouse wheel one notch down over a scroll list, as the game reports it; returns how far the list moved.</summary>
+        public static IEnumerator ScrollOneNotch(ScrollRect scroll, float[] moved)
+        {
+            // Let the list lay itself out first, so there's something to scroll.
+            yield return Frames(3);
+            Canvas.ForceUpdateCanvases();
+            Assert.True(scroll.content.rect.height > scroll.viewport.rect.height + 200f,
+                $"The list is taller than its view (list {scroll.content.rect.height:0}, view {scroll.viewport.rect.height:0})");
+            float notch = ((InputSystemUIInputModule)EventSystem.current.currentInputModule).scrollDeltaPerTick;
+            float before = scroll.content.anchoredPosition.y;
+            scroll.OnScroll(new PointerEventData(EventSystem.current) { scrollDelta = new Vector2(0f, -notch) });
+            yield return null;
+            moved[0] = Mathf.Abs(scroll.content.anchoredPosition.y - before);
         }
 
         /// <summary>Saves a screenshot to BepInEx/StorageMaster.Tests.screenshots/name.png (after the frame is drawn).</summary>
