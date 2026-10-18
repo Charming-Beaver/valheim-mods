@@ -28,6 +28,14 @@ The tests run inside the game. The script builds the mod and `tests/StorageMaste
 
 The script removes the test plugin again afterwards. The plugin also only runs when the script has created its marker file in `BepInEx/config`, so a leftover copy doesn't affect normal games. Screenshots of the mod's windows end up in `BepInEx/StorageMaster.Tests.screenshots` in the Valheim folder.
 
+To check compatibility with other mods, add them from Thunderstore by their `Namespace-Name`:
+
+```
+.\tests\run-tests.ps1 StorageMaster -With seneaL-SeneaL_UI
+```
+
+They're downloaded with their dependencies into `tests/.mods` (once, ignored by git) and installed only for that run.
+
 ### Releasing
 
 1. Raise `Version` in the mod's `src/Plugin.cs` and rename the `## Unreleased` section of its `CHANGELOG.md` to that version. Commit and push.

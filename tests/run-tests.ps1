@@ -6,21 +6,28 @@
     The tests run inside the game: tests\<Mod>.Tests is a BepInEx plugin that loads a test character and world
     (both called "modtest", created on the first run), runs every test and quits the game. Steam must be running.
 
+    -With runs the tests alongside other people's mods from Thunderstore, to check compatibility. They're downloaded
+    with their dependencies into tests\.mods (once, ignored by git) and installed only for this run.
+
     Screenshots taken by the tests end up in BepInEx\<Mod>.Tests.screenshots in the Valheim folder.
-    The test plugin is removed again afterwards, so normal games aren't affected.
+    The test plugin and any -With mods are removed again afterwards, so normal games aren't affected.
 
 .EXAMPLE
     .\tests\run-tests.ps1 StorageMaster
+
+.EXAMPLE
+    .\tests\run-tests.ps1 StorageMaster -With seneaL-SeneaL_UI
 #>
 param(
     [string]$Mod = 'StorageMaster',
+    # Thunderstore packages as Namespace-Name, optionally with -Version (latest when left out).
+    [string[]]$With = @(),
     # Found through Steam when left out.
     [string]$ValheimDir,
     [int]$TimeoutMinutes = 15
 )
 
 $ErrorActionPreference = 'Stop'
-$root = Split-Path $PSScriptRoot -Parent
 $project = Join-Path $PSScriptRoot "$Mod.Tests\$Mod.Tests.csproj"
 if (-not (Test-Path $project)) { throw "No test project at $project" }
 
@@ -39,20 +46,87 @@ function Find-Valheim {
     throw 'Could not find Valheim through Steam. Pass -ValheimDir "C:\path\to\Valheim".'
 }
 
+# Downloads a Thunderstore package and its dependencies into tests\.mods; returns their folders.
+# BepInExPack is skipped (it's already installed), and dependencies use their latest version.
+function Get-ThunderstorePackage([string]$spec, [hashtable]$seen) {
+    if ($spec -notmatch '^([^-]+)-(.+?)(?:-(\d+\.\d+\.\d+))?$') { throw "Not a Thunderstore package (Namespace-Name[-Version]): $spec" }
+    $namespace, $name, $version = $Matches[1], $Matches[2], $Matches[3]
+    $key = "$namespace-$name"
+    if ($seen.ContainsKey($key) -or $key -eq 'denikson-BepInExPack_Valheim') { return @() }
+    $seen[$key] = $true
+
+    if (-not $version) {
+        $info = Invoke-RestMethod "https://thunderstore.io/api/experimental/package/$namespace/$name/"
+        $version = $info.latest.version_number
+    }
+    $dir = Join-Path $PSScriptRoot ".mods\$key-$version"
+    if (-not (Test-Path (Join-Path $dir 'manifest.json'))) {
+        Write-Host "Downloading $key $version"
+        $zip = "$dir.zip"
+        New-Item -ItemType Directory -Force (Split-Path $dir) | Out-Null
+        Invoke-WebRequest "https://thunderstore.io/package/download/$namespace/$name/$version/" -OutFile $zip
+        if (Test-Path $dir) { Remove-Item -Recurse -Force $dir }
+        Expand-Archive $zip $dir
+        Remove-Item $zip
+    }
+    $manifest = Get-Content (Join-Path $dir 'manifest.json') -Raw | ConvertFrom-Json
+    $folders = @()
+    foreach ($dependency in $manifest.dependencies) {
+        $folders += Get-ThunderstorePackage ($dependency -replace '-\d+\.\d+\.\d+$', '') $seen
+    }
+    return $folders + @($dir)
+}
+
+# Installs an unpacked Thunderstore package the way mod managers do: plugins\ and patchers\ into BepInEx's folders,
+# config\ into BepInEx\config, and a package without those folders straight into plugins.
+function Install-Package([string]$dir, [string]$pluginsRoot, [string]$patchersRoot, [string]$configDir) {
+    $name = Split-Path $dir -Leaf
+    $layout = @{ plugins = $pluginsRoot; patchers = $patchersRoot; config = $configDir }
+    $special = $false
+    foreach ($folder in $layout.Keys) {
+        $source = Get-ChildItem $dir -Directory | Where-Object { $_.Name -eq $folder }
+        if (-not $source) { continue }
+        $special = $true
+        $target = if ($folder -eq 'config') { $configDir } else { Join-Path $layout[$folder] $name }
+        New-Item -ItemType Directory -Force $target | Out-Null
+        Copy-Item (Join-Path $source.FullName '*') $target -Recurse -Force
+    }
+    if (-not $special) {
+        $target = Join-Path $pluginsRoot $name
+        New-Item -ItemType Directory -Force $target | Out-Null
+        Get-ChildItem $dir | Where-Object { $_.Name -notin 'manifest.json', 'icon.png', 'README.md', 'CHANGELOG.md' } |
+            Copy-Item -Destination $target -Recurse -Force
+    }
+}
+
 if (-not $ValheimDir) { $ValheimDir = Find-Valheim }
 $bepinex = Join-Path $ValheimDir 'BepInEx'
 if (-not (Test-Path (Join-Path $bepinex 'core\BepInEx.dll'))) { throw "BepInEx isn't installed in $ValheimDir" }
 if (Get-Process valheim -ErrorAction SilentlyContinue) { throw 'Valheim is already running. Close it first.' }
 
+$packages = @()
+$seen = @{}
+foreach ($spec in $With) { $packages += Get-ThunderstorePackage $spec $seen }
+
 dotnet build $project -c Debug --nologo -v quiet "-p:ValheimDir=$ValheimDir"
 if ($LASTEXITCODE -ne 0) { throw 'Build failed' }
 
+$configDir = Join-Path $bepinex 'config'
 $pluginDir = Join-Path $bepinex "plugins\$Mod.Tests"
-$marker = Join-Path $bepinex "config\$Mod.Tests.run"
+$testModPlugins = Join-Path $bepinex 'plugins\_test-mods'
+$testModPatchers = Join-Path $bepinex 'patchers\_test-mods'
+$marker = Join-Path $configDir "$Mod.Tests.run"
 $results = Join-Path $bepinex "$Mod.Tests.results.txt"
 $screenshots = Join-Path $bepinex "$Mod.Tests.screenshots"
+# Mods write their config files on start; the ones that weren't there before are removed afterwards.
+$configsBefore = @(Get-ChildItem $configDir -File -Recurse | ForEach-Object FullName)
+
 New-Item -ItemType Directory -Force $pluginDir | Out-Null
 Copy-Item (Join-Path $PSScriptRoot "$Mod.Tests\bin\Debug\netstandard2.1\$Mod.Tests.dll") $pluginDir
+foreach ($package in $packages) {
+    Write-Host "With $(Split-Path $package -Leaf)"
+    Install-Package $package $testModPlugins $testModPatchers $configDir
+}
 if (Test-Path $results) { Remove-Item $results }
 if (Test-Path $screenshots) { Remove-Item -Recurse $screenshots }
 Set-Content -Path $marker -Value 'Run the tests on the next start' -Encoding utf8
@@ -73,7 +147,7 @@ try {
             $lines = @(Get-Content $results)
             for (; $shown -lt $lines.Count; $shown++) {
                 $line = $lines[$shown]
-                $color = if ($line -match '^PASS') { 'Green' } elseif ($line -match '^(FAIL|ABORT)') { 'Red' } else { 'Gray' }
+                $color = switch -Regex ($line) { '^PASS' { 'Green' } '^(FAIL|ABORT)' { 'Red' } '^SKIP' { 'Yellow' } default { 'Gray' } }
                 Write-Host $line -ForegroundColor $color
                 if ($line -match '^(DONE|ABORT)') { $done = $line }
             }
@@ -97,7 +171,8 @@ finally {
     # The game quits by itself after the tests; give it a moment to save, then make sure it's gone.
     for ($i = 0; $i -lt 30 -and (Get-Process valheim -ErrorAction SilentlyContinue); $i++) { Start-Sleep -Seconds 1 }
     Get-Process valheim -ErrorAction SilentlyContinue | Stop-Process -Force
-    Remove-Item -Recurse -Force $pluginDir -ErrorAction SilentlyContinue
+    Remove-Item -Recurse -Force $pluginDir, $testModPlugins, $testModPatchers -ErrorAction SilentlyContinue
     Remove-Item -Force $marker -ErrorAction SilentlyContinue
+    Get-ChildItem $configDir -File -Recurse | Where-Object { $_.FullName -notin $configsBefore } | Remove-Item -Force
 }
 if ($failed) { exit 1 }
