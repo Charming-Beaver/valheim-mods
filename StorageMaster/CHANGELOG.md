@@ -4,6 +4,7 @@
 
 - Pressing Quick stack again within a second no longer replaces the summary with a wrong "the chests are full" message
 - The mouse wheel scrolls the Storage window and the Info window at a normal speed. One notch used to move them only a couple of pixels
+- Window titles and headers no longer turn into magenta blocks when another mod loads its own Norse font
 
 ## 1.0.0
 
