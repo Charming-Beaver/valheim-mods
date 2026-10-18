@@ -18,6 +18,16 @@ dotnet build -c Release
 The build copies the mod into `BepInEx/plugins/`. If Valheim isn't installed at the default path, pass it in:
 `dotnet build -c Release -p:ValheimDir="C:\path\to\Valheim"`
 
+### Testing
+
+```
+.\tests\run-tests.ps1 StorageMaster
+```
+
+The tests run inside the game. The script builds the mod and `tests/StorageMaster.Tests` (a BepInEx plugin), starts Valheim, and prints each result as it comes in. The plugin loads a local test character and world called `modtest`, creating both on the first run, then runs every `[Test]` and quits the game. Steam must be running, and the game takes over the screen for a minute or two.
+
+The script removes the test plugin again afterwards. The plugin also only runs when the script has created its marker file in `BepInEx/config`, so a leftover copy doesn't affect normal games. Screenshots of the mod's windows end up in `BepInEx/StorageMaster.Tests.screenshots` in the Valheim folder.
+
 ### Releasing
 
 1. Raise `Version` in the mod's `src/Plugin.cs` and add a section for it to its `CHANGELOG.md`. Commit and push.
