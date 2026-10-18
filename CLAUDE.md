@@ -33,8 +33,33 @@ Link related issues both ways:
 ### Screenshots
 `gh` can't upload images to issues. The maintainer uploads them manually, so after creating issues, give a list of which screenshot goes in which issue.
 
+## Building
+- Needs the .NET SDK and Valheim with BepInEx installed. The build references the game's DLLs and copies the mod into `BepInEx/plugins/<Mod>/`.
+- `Directory.Build.props` defaults `ValheimDir` to `D:\SteamLibrary\steamapps\common\Valheim`. Elsewhere pass `-p:ValheimDir="<path>"`. `tests/run-tests.ps1` finds Valheim through Steam by itself.
+- The mods use Krafs.Publicizer, so private game members (and, in the tests, the mod's own private members) can be used directly, without reflection.
+
+## Reading the game's code
+Decompile a class to see what the game actually does before patching or calling it:
+```sh
+ilspycmd -t <Type> "<ValheimDir>/valheim_Data/Managed/assembly_valheim.dll"
+```
+Install it with `dotnet tool install -g ilspycmd --version 8.2.0.7535`. Newer versions need a newer .NET than SDK 8.
+
+## Mod code notes
+- Mods are client-side only and must work in multiplayer. Chests can be owned by another player or the server. Storage Master takes ownership by reusing the game's "Place stacks" request (`ChestAccess`), so answers can arrive later than the request.
+- Storage Master's saved-data keys start with `InventoryTools.` (the mod's working title). Don't rename them, or players lose their locked slots, chest names and skipped chests.
+
 ## Testing
-In-game tests live in `tests/<Mod>.Tests/` (lowercase `tests`, so it isn't mistaken for a mod folder). Run them with `.\tests\run-tests.ps1 <Mod>` after changing a mod: it builds, starts Valheim, prints PASS/FAIL per test and exits non-zero on failure. Look at the screenshots it lists to check UI changes. Tests are static methods marked `[Test]` (void or `IEnumerator` to wait for frames), using the helpers in `TestKit.cs`. Each test starts from a clean state (no test chests, empty inventory, default settings).
+In-game tests live in `tests/<Mod>.Tests/` (lowercase `tests`, so it isn't mistaken for a mod folder). Run them with `.\tests\run-tests.ps1 <Mod>` after changing a mod: it builds, starts Valheim, prints PASS/FAIL per test and exits non-zero on failure. A run takes a couple of minutes, needs Steam running and takes over the screen. Look at the screenshots it lists to check UI changes.
+- Tests are static methods marked `[Test]` (void, or `IEnumerator` to wait for frames), using the helpers in `TestKit.cs`.
+- Each test starts from a clean state (no test chests, empty inventory, no locks or skips, default settings, no messages). When a mod gets new state that could leak between tests, reset it in `TestKit.Reset`.
+- For a bug, write a test that fails first, then fix it.
+- The tests run in single player, so multiplayer paths (chests owned by others, delayed answers) aren't covered. Check those by reading the code and say so.
+
+## Changes and releases
+- Work on a branch and open a PR. The maintainer merges them.
+- Commit messages: a short summary line, then a plain explanation of what changed and why.
+- Add a line for every player-facing change under `## Unreleased` at the top of the mod's `CHANGELOG.md`, creating the section if it's missing. Don't add version sections: the maintainer picks the version and renames `Unreleased` when releasing.
 
 ## Adding a new mod
 1. Create the mod folder (its name becomes the mod ID).
