@@ -30,8 +30,8 @@ The script removes the test plugin again afterwards. The plugin also only runs w
 
 ### Releasing
 
-1. Raise `Version` in the mod's `src/Plugin.cs` and add a section for it to its `CHANGELOG.md`. Commit and push.
-2. Run `.elease.ps1 StorageMaster`. It builds both zips (GitHub/Nexus and Thunderstore) and creates a **draft** GitHub release.
+1. Raise `Version` in the mod's `src/Plugin.cs` and rename the `## Unreleased` section of its `CHANGELOG.md` to that version. Commit and push.
+2. Run `.\release.ps1 StorageMaster`. It builds both zips (GitHub/Nexus and Thunderstore) and creates a **draft** GitHub release.
 3. Test the build in game, then publish the draft on GitHub. The **Publish to Thunderstore** workflow uploads it to Thunderstore.
 4. Upload `dist/StorageMaster-<version>.zip` to Nexus by hand.
 
