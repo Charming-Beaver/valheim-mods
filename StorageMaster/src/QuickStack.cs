@@ -22,7 +22,8 @@ namespace StorageMaster
             }
 
             var names = MovableNames(player);
-            _moved = _chests = _busy = 0;
+            // Pressed again before the last summary showed: add to it rather than losing what was already moved.
+            if (_reportAt < 0f) _moved = _chests = _busy = 0;
             int asked = 0;
             if (names.Count > 0)
             {
