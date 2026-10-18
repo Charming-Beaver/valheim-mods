@@ -43,5 +43,16 @@ namespace StorageMaster.Tests
             Assert.True(InfoWindow.IsOpen, "Info window open");
             yield return Screenshot("info-window");
         }
+
+        /// <summary>One mouse wheel notch scrolls the Info window's text by a few lines (#3).</summary>
+        [Test]
+        private static IEnumerator OneWheelNotchScrollsTheInfoWindow()
+        {
+            InfoWindow.Open();
+            var moved = new float[1];
+            yield return ScrollOneNotch(InfoWindow._root.GetComponentInChildren<UnityEngine.UI.ScrollRect>(), moved);
+
+            Assert.True(moved[0] >= 100f, $"One notch scrolled {moved[0]:0.#} px");
+        }
     }
 }

@@ -137,6 +137,19 @@ namespace StorageMaster.Tests
             }
         }
 
+        /// <summary>One mouse wheel notch scrolls the chest list by about a row of chests, not a few pixels (#3).</summary>
+        [Test]
+        private static IEnumerator OneWheelNotchScrollsTheChestList()
+        {
+            for (int i = 0; i < 16; i++) SpawnChest(3f + i % 3, i * 360f / 16);
+
+            yield return OpenAndWait();
+            var moved = new float[1];
+            yield return ScrollOneNotch(StorageWindow._cardList.parent.parent.GetComponent<UnityEngine.UI.ScrollRect>(), moved);
+
+            Assert.True(moved[0] >= 100f, $"One notch scrolled {moved[0]:0.#} px");
+        }
+
         // ------------------------------------------------------------------ helpers
 
         private static IEnumerator OpenAndWait()
