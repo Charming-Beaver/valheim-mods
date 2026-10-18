@@ -1,6 +1,4 @@
-using System;
 using System.Collections.Generic;
-using System.Linq;
 using TMPro;
 using UnityEngine;
 using UnityEngine.Events;
@@ -39,9 +37,9 @@ namespace StorageMaster.UI
 
             Font = gui.m_containerName.font;
             FontMaterial = gui.m_containerName.fontSharedMaterial;
-            Norse = Resources.FindObjectsOfTypeAll<TMP_FontAsset>().FirstOrDefault(f => f.name.IndexOf("Norse", StringComparison.OrdinalIgnoreCase) >= 0 && f.name.IndexOf("Bold", StringComparison.OrdinalIgnoreCase) >= 0)
-                    ?? Resources.FindObjectsOfTypeAll<TMP_FontAsset>().FirstOrDefault(f => f.name.IndexOf("Norse", StringComparison.OrdinalIgnoreCase) >= 0)
-                    ?? Font;
+            // Headers use the same font (Norse bold) with its plain material instead of the outlined one. Taken from the
+            // game's own text, not searched by name, so a "Norse" font loaded by another mod can't end up in our windows.
+            Norse = Font;
 
             Dictionary<string, Sprite> sprites = new Dictionary<string, Sprite>();
             foreach (Sprite s in Resources.FindObjectsOfTypeAll<Sprite>())

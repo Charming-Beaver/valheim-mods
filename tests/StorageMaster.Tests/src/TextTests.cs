@@ -57,6 +57,52 @@ namespace StorageMaster.Tests
             }
         }
 
+        /// <summary>
+        /// Another mod loading its own "Norse" font, with a material that can't render, doesn't break our headers (#1).
+        /// </summary>
+        [Test]
+        private static IEnumerator TextRendersWhenAnotherModLoadsABrokenNorseFont()
+        {
+            var fake = ScriptableObject.CreateInstance<TMP_FontAsset>();
+            fake.name = "OtherMod-Norsebold";
+            fake.material = new Material(Shader.Find("Hidden/InternalErrorShader")) { name = "OtherMod-Norsebold Material" };
+            try
+            {
+                yield return RebuildWindows();
+                Container chest = SpawnChest();
+                StorageWindow.Open();
+                yield return WaitUntil(() => StorageWindow._cards.All(c => c.Claimed), "the chest to open");
+                yield return Frames(3);
+                AssertAllRender(StorageWindow._root);
+                InfoWindow.Open();
+                yield return Frames(3);
+                AssertAllRender(InfoWindow._root);
+            }
+            finally
+            {
+                Object.Destroy(fake.material);
+                Object.Destroy(fake);
+            }
+            // The next tests get windows built with the real fonts again.
+            yield return RebuildWindows();
+        }
+
+        /// <summary>Throws away the windows and the fonts and templates they're built from, so they're built again.</summary>
+        private static IEnumerator RebuildWindows()
+        {
+            StorageWindow.Close();
+            InfoWindow.Close();
+            if (StorageWindow._root != null) Object.Destroy(StorageWindow._root);
+            if (InfoWindow._root != null) Object.Destroy(InfoWindow._root);
+            StorageWindow._root = null;
+            InfoWindow._root = null;
+            // Building the Info window adds to these; the mod itself never builds it twice.
+            InfoWindow._keyRows.Clear();
+            InfoWindow._refreshers.Clear();
+            UIKit.Ready = false;
+            yield return null;
+        }
+
         private static void AssertAllRender(GameObject root)
         {
             var problems = new List<string>();
@@ -74,7 +120,10 @@ namespace StorageMaster.Tests
         private static string Problem(TMP_Text text)
         {
             if (text.font == null) return "no font";
-            if (text.font.atlasTexture == null) return $"font {text.font.name} has no atlas";
+            if (text.font.atlasTextures == null || text.font.atlasTextures.Length == 0 || text.font.atlasTexture == null)
+            {
+                return $"font {text.font.name} has no atlas";
+            }
             Material material = text.fontSharedMaterial;
             if (material == null) return "no material";
             Shader shader = material.shader;
