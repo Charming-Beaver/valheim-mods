@@ -1,0 +1,67 @@
+name: Bug report
+description: Something doesn't work, looks broken or conflicts with another mod
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: Thanks for taking the time to report this! The more of the fields below you fill in, the faster it can be fixed.
+
+  # The "mod: <answer>" label is added automatically by .github/workflows/label-mod.yml.
+  # When adding a mod, add its folder name here, to feature_request.yml and create the "mod: <FolderName>" label.
+  - type: dropdown
+    id: mod
+    attributes:
+      label: Which mod?
+      options:
+        - StorageMaster
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Mod version
+      description: Shown in the mod's Info window or in r2modman.
+      placeholder: e.g. 1.0.0
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What happened?
+      description: Describe what went wrong. Screenshots help a lot, you can paste or drag them in here.
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open the storage window next to ...
+        2. Click ...
+        3. ...
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect to happen?
+
+  - type: textarea
+    id: mods
+    attributes:
+      label: Other installed mods
+      description: Your mod list, especially inventory, storage and UI mods. An r2modman/Thunderstore profile code works too.
+      placeholder: e.g. ExtraSlots, Adventure Backpacks, or a modpack like Path of Valheiman
+
+  - type: input
+    id: bepinex
+    attributes:
+      label: BepInEx version
+      placeholder: e.g. BepInExPack 5.4.2351
+
+  - type: textarea
+    id: log
+    attributes:
+      label: Log
+      description: Errors from BepInEx/LogOutput.log, if there are any.
+      render: text
