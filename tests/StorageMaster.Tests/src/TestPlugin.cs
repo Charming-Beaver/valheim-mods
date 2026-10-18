@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using BepInEx;
+using BepInEx.Bootstrap;
 using BepInEx.Logging;
 using UnityEngine;
 
@@ -62,12 +63,22 @@ namespace StorageMaster.Tests
                 yield break;
             }
 
+            var others = Chainloader.PluginInfos.Values.Where(p => p.Metadata.GUID != Plugin.Guid && p.Instance?.GetType() != typeof(TestPlugin)).ToList();
+            if (others.Count > 0) Write("WITH " + string.Join(", ", others.Select(p => $"{p.Metadata.Name} {p.Metadata.Version} ({p.Metadata.GUID})")));
+
             var tests = FindTests();
             Write($"RUNNING {tests.Count} tests");
-            int passed = 0, failed = 0;
+            int passed = 0, failed = 0, skipped = 0;
             foreach (MethodInfo test in tests)
             {
                 string name = $"{test.DeclaringType.Name}.{test.Name}";
+                var missing = test.GetCustomAttributes<RequiresModAttribute>().Where(r => !Chainloader.PluginInfos.ContainsKey(r.Guid)).ToList();
+                if (missing.Count > 0)
+                {
+                    skipped++;
+                    Write($"SKIP {name}: needs {string.Join(", ", missing.Select(r => r.Guid))}");
+                    continue;
+                }
                 float started = Time.realtimeSinceStartup;
                 IEnumerator body = Flatten(Wrap(test), out Func<Exception> error);
                 while (body.MoveNext()) yield return body.Current;
@@ -88,7 +99,7 @@ namespace StorageMaster.Tests
                     Write($"FAIL {name} {time}: {message.Replace("\n", "\n    ")}");
                 }
             }
-            Finish(passed, failed);
+            Finish(passed, failed, skipped);
         }
 
         private static IEnumerator Wrap(MethodInfo test)
@@ -98,9 +109,9 @@ namespace StorageMaster.Tests
             if (result is IEnumerator e) yield return e;
         }
 
-        private static void Finish(int passed, int failed)
+        private static void Finish(int passed, int failed, int skipped = 0)
         {
-            Write($"DONE {passed} passed, {failed} failed");
+            Write($"DONE {passed} passed, {failed} failed" + (skipped > 0 ? $", {skipped} skipped" : ""));
             Application.Quit();
         }
 
@@ -160,6 +171,21 @@ namespace StorageMaster.Tests
     [AttributeUsage(AttributeTargets.Method)]
     public class TestAttribute : Attribute
     {
+    }
+
+    /// <summary>
+    /// Runs the test only when another mod (by its BepInEx GUID) is loaded, i.e. with run-tests.ps1 -With.
+    /// Tests without it run in every setup.
+    /// </summary>
+    [AttributeUsage(AttributeTargets.Method, AllowMultiple = true)]
+    public class RequiresModAttribute : Attribute
+    {
+        public readonly string Guid;
+
+        public RequiresModAttribute(string guid)
+        {
+            Guid = guid;
+        }
     }
 
     public class AssertionException : Exception

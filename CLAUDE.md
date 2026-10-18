@@ -7,7 +7,7 @@ Valheim (BepInEx 5) mods by Charming Beaver. Each mod lives in its own top-level
 ### Labels
 - Every issue gets the label of the mod it's about: `mod: <FolderName>`, e.g. `mod: StorageMaster`.
 - Type: `bug`, `enhancement`, `question`, etc. (GitHub defaults).
-- Area: `ui` (layout, rendering, usability of windows and buttons), `sorting` (Sort, Tidy up, Gather here, Quick stack, locked slots).
+- Area: `ui` (layout, rendering, usability of windows and buttons), `sorting` (Sort, Tidy up, Gather here, Quick stack, locked slots), `performance` (freezes, slowness).
 - `mod-compatibility`: conflicts or integration with *other people's* mods or modpacks.
 - Source: `reddit-feedback` for reports from the r/ModdedValheim release thread. Create a similar label for other sources (e.g. Nexus) when needed.
 - Create a new label when an issue needs one rather than squeezing it into an existing one.
@@ -54,6 +54,7 @@ In-game tests live in `tests/<Mod>.Tests/` (lowercase `tests`, so it isn't mista
 - Tests are static methods marked `[Test]` (void, or `IEnumerator` to wait for frames), using the helpers in `TestKit.cs`.
 - Each test starts from a clean state (no test chests, empty inventory, no locks or skips, default settings, no messages). When a mod gets new state that could leak between tests, reset it in `TestKit.Reset`.
 - For a bug, write a test that fails first, then fix it.
+- `-With <Namespace-Name>` runs the tests alongside mods from Thunderstore (e.g. `-With seneaL-SeneaL_UI`), downloaded with their dependencies into the ignored `tests/.mods` and installed only for that run. Use it to reproduce `mod-compatibility` issues. Every test runs in every setup; mark a test that only makes sense with a mod `[RequiresMod("<BepInEx GUID>")]` (the results list the loaded mods' GUIDs). Other people's mods never go into the repo or into `thunderstore.json`, unless the mod can't run without them.
 - The tests run in single player, so multiplayer paths (chests owned by others, delayed answers) aren't covered. Check those by reading the code and say so.
 
 ## Changes and releases
