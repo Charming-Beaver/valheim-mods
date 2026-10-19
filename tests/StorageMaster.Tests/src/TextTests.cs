@@ -87,9 +87,51 @@ namespace StorageMaster.Tests
             yield return RebuildWindows();
         }
 
-        /// <summary>Throws away the windows and the fonts and templates they're built from, so they're built again.</summary>
+        /// <summary>Building the mod's windows and buttons logs no TextMeshPro warnings about missing fonts (#20).</summary>
+        [Test]
+        private static IEnumerator BuildingTheUILogsNoFontWarnings()
+        {
+            var warnings = new List<string>();
+            void Listen(string message, string stack, LogType type)
+            {
+                if (message.Contains("Font Asset")) warnings.Add(message);
+            }
+            Application.logMessageReceived += Listen;
+            try
+            {
+                yield return RebuildWindows();
+                Container chest = SpawnChest();
+                InventoryGui.instance.Show(chest);
+                yield return WaitUntil(() => StorageMaster.InventoryButtons._sortChest != null, "the inventory buttons");
+                InventoryGui.instance.Hide();
+                StorageWindow.Open();
+                yield return WaitUntil(() => StorageWindow._cards.All(c => c.Claimed), "the chest to open");
+                StorageWindow.ToggleSettings();
+                InfoWindow.Open();
+                yield return Frames(3);
+            }
+            finally
+            {
+                Application.logMessageReceived -= Listen;
+            }
+            Assert.True(warnings.Count == 0, $"{warnings.Count} font warnings, e.g. \"{warnings.FirstOrDefault()}\"");
+        }
+
+        /// <summary>Throws away the windows, buttons and the fonts and templates they're built from, so they're built again.</summary>
         private static IEnumerator RebuildWindows()
         {
+            foreach (var button in new[]
+                     {
+                         StorageMaster.InventoryButtons._sort, StorageMaster.InventoryButtons._mode, StorageMaster.InventoryButtons._quickStack,
+                         StorageMaster.InventoryButtons._autoSort, StorageMaster.InventoryButtons._storage, StorageMaster.InventoryButtons._info,
+                         StorageMaster.InventoryButtons._sortChest,
+                     })
+            {
+                if (button != null) Object.Destroy(button.gameObject);
+            }
+            StorageMaster.InventoryButtons._sort = StorageMaster.InventoryButtons._mode = StorageMaster.InventoryButtons._quickStack =
+                StorageMaster.InventoryButtons._autoSort = StorageMaster.InventoryButtons._storage = StorageMaster.InventoryButtons._info =
+                    StorageMaster.InventoryButtons._sortChest = null;
             StorageWindow.Close();
             InfoWindow.Close();
             if (StorageWindow._root != null) Object.Destroy(StorageWindow._root);
