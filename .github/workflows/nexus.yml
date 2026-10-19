@@ -108,6 +108,7 @@ jobs:
           display_name: ${{ steps.mod.outputs.display_name }}
           description: ${{ steps.mod.outputs.description }}
           category: main
-          archive_existing_version: true
+          # Not archived: the previous version stays downloadable (under "Old"), so players can go back to it.
+          archive_existing_version: false
           update_mod_version: true
           changelog: ${{ steps.changelog.outputs.notes }}
