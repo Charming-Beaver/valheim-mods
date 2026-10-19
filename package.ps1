@@ -22,7 +22,23 @@ $plugin = Get-Content (Join-Path $project 'src\Plugin.cs') -Raw
 if ($plugin -notmatch 'Version\s*=\s*"([^"]+)"') { throw 'Could not find the Version constant in Plugin.cs' }
 $version = $Matches[1]
 
-dotnet build $project -c Release --nologo -v quiet
+# Without a ValheimDir, Valheim is found through Steam, like the tests do (Directory.Build.props has only a default).
+$valheim = $env:ValheimDir
+if (-not $valheim) {
+    $steam = (Get-ItemProperty HKCU:\Software\Valve\Steam -ErrorAction SilentlyContinue).SteamPath
+    $libraries = @()
+    if ($steam) {
+        $libraries += $steam
+        $vdf = Join-Path $steam 'steamapps\libraryfolders.vdf'
+        if (Test-Path $vdf) {
+            $libraries += Select-String -Path $vdf -Pattern '"path"\s+"([^"]+)"' | ForEach-Object { $_.Matches[0].Groups[1].Value -replace '\\\\', '\' }
+        }
+    }
+    $valheim = $libraries | ForEach-Object { Join-Path $_ 'steamapps\common\Valheim' } | Where-Object { Test-Path (Join-Path $_ 'valheim.exe') } | Select-Object -First 1
+}
+$buildArgs = @('build', $project, '-c', 'Release', '--nologo', '-v', 'quiet')
+if ($valheim) { $buildArgs += "-p:ValheimDir=$valheim" }
+dotnet @buildArgs
 if ($LASTEXITCODE -ne 0) { throw 'Build failed' }
 $dll = Join-Path $project "bin\Release\netstandard2.1\$Mod.dll"
 
