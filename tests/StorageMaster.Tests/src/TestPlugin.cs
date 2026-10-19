@@ -116,11 +116,29 @@ namespace StorageMaster.Tests
         private static IEnumerator SetUpPlayArea()
         {
             string[] items = { "Wood", "Stone", "Resin", "Flint", "Raspberry", "LeatherScraps", "DeerHide", "Coins" };
-            for (int c = 0; c < 4; c++)
+            // Always the same layout, so a session can be repeated.
+            var random = new System.Random(42);
+            // 20 chests all around, 3 to 14 m away (all within the Storage window's range).
+            for (int c = 0; c < 20; c++)
             {
-                Container chest = TestKit.SpawnChest(3f + c, c * 70f);
+                Container chest = TestKit.SpawnChest(3f + c % 6 * 2.2f, c * 18f);
                 yield return null;
-                for (int i = 0; i < 4; i++) TestKit.Put(chest.GetInventory(), items[(c * 3 + i) % items.Length], 5 + 10 * i, i, 0);
+                Inventory inv = chest.GetInventory();
+                int width = inv.GetWidth(), slots = width * inv.GetHeight();
+                if (c % 3 == 0)
+                {
+                    // Nearly full of one item, with a different item in the last slot.
+                    string main = items[c / 3 % items.Length];
+                    for (int s = 0; s < slots - 1; s++) TestKit.Put(inv, main, random.Next(10, 51), s % width, s / width);
+                    string other = items[(c / 3 + 3) % items.Length];
+                    TestKit.Put(inv, other, random.Next(1, 30), (slots - 1) % width, (slots - 1) / width);
+                }
+                else
+                {
+                    // A few stacks of mixed items.
+                    int count = random.Next(2, 6);
+                    for (int s = 0; s < count; s++) TestKit.Put(inv, items[random.Next(items.Length)], random.Next(1, 51), s % width, s / width);
+                }
             }
             // The test character's inventory is only for testing.
             TestKit.Mine.RemoveAll();
