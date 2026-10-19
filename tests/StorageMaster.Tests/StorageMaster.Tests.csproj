@@ -20,6 +20,7 @@
     </PackageReference>
     <Publicize Include="assembly_valheim" />
     <Publicize Include="assembly_utils" />
+    <Publicize Include="assembly_guiutils" />
     <!-- Tests reach into the mod's private state (open chests, chosen item, cached locks). -->
     <Publicize Include="StorageMaster" />
   </ItemGroup>

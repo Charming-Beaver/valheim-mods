@@ -1,6 +1,8 @@
-using System.Collections;
+﻿using System.Collections;
+using System.Collections.Generic;
 using System.Linq;
 using StorageMaster.UI;
+using UnityEngine;
 using static StorageMaster.Tests.TestKit;
 
 namespace StorageMaster.Tests
@@ -148,6 +150,61 @@ namespace StorageMaster.Tests
             yield return ScrollOneNotch(StorageWindow._cardList.parent.parent.GetComponent<UnityEngine.UI.ScrollRect>(), moved);
 
             Assert.True(moved[0] >= 100f, $"One notch scrolled {moved[0]:0.#} px");
+        }
+
+        /// <summary>
+        /// Hovering over an item in the window shows the game's tooltip with its name and description, also with mods
+        /// like SeneaL UI that blank tooltips on inventory grids they don't draw themselves (#21).
+        /// </summary>
+        [Test]
+        private static IEnumerator HoveringAnItemShowsItsTooltip()
+        {
+            Container chest = SpawnChest();
+            Put(chest.GetInventory(), "Wood", 10, 0, 0);
+            Put(Mine, "Stone", 5, 2, 2);
+            yield return OpenAndWait();
+            yield return Frames(3);
+
+            InventoryGrid chestGrid = StorageWindow._cards[0].Grid;
+            yield return AssertTooltipOnHover(chestGrid.GetElement(0, 0, chestGrid.m_width), "Wood");
+            InventoryGrid myGrid = StorageWindow._playerGrid;
+            yield return AssertTooltipOnHover(myGrid.GetElement(2, 2, myGrid.m_width), "Stone");
+        }
+
+        private static IEnumerator AssertTooltipOnHover(InventoryElement element, string prefab)
+        {
+            UITooltip tip = element.m_tooltip;
+            // What Unity's event system does when the mouse enters the slot. The real cursor can't be moved reliably,
+            // e.g. when the game window doesn't have focus.
+            tip.OnPointerEnter(new UnityEngine.EventSystems.PointerEventData(UnityEngine.EventSystems.EventSystem.current) { pointerEnter = tip.gameObject });
+            // The game fills the shared tooltip right away and shows it half a second later, but only while the real
+            // mouse is over the slot, so check what it was filled with. A few frames on, the window has updated its grids
+            // again (which is when other mods blank the slot's tooltip) and it must still be there.
+            yield return Frames(5);
+            Assert.True(UITooltip.m_current == tip && UITooltip.m_tooltip != null,
+                $"The game started showing the tooltip of {prefab} (slot tooltip: \"{tip.m_topic}\" / \"{tip.m_text}\")");
+            string shown = string.Join(" | ", UITooltip.m_tooltip.GetComponentsInChildren<TMPro.TMP_Text>(true).Select(t => t.text));
+            ItemDrop.ItemData item = ObjectDB.instance.GetItemPrefab(prefab).GetComponent<ItemDrop>().m_itemData;
+            string name = Localization.instance.Localize(item.m_shared.m_name);
+            string description = Localization.instance.Localize(item.m_shared.m_description);
+            Assert.True(shown.Contains(name) && shown.Contains(description), $"Tooltip of {prefab} shows its name and description: \"{shown}\"");
+            UITooltip.HideTooltip();
+        }
+
+        /// <summary>The window's and the inventory buttons' own tooltips have a tooltip to show (#21).</summary>
+        [Test]
+        private static IEnumerator ButtonTooltipsCanShow()
+        {
+            InventoryGui.instance.Show(SpawnChest());
+            yield return WaitUntil(() => StorageMaster.InventoryButtons._sortChest != null, "the inventory buttons");
+            InventoryGui.instance.Hide();
+            yield return OpenAndWait();
+
+            var roots = new List<GameObject> { StorageWindow._root, StorageMaster.InventoryButtons._sort.transform.parent.gameObject };
+            var missing = roots.SelectMany(r => r.GetComponentsInChildren<UITooltip>(true))
+                .Where(t => t.GetComponent<InventoryElement>() == null && t.m_tooltipPrefab == null)
+                .Select(t => t.name).ToList();
+            Assert.True(missing.Count == 0, $"{missing.Count} tooltips have nothing to show, e.g. {missing.FirstOrDefault()}");
         }
 
         // ------------------------------------------------------------------ helpers
