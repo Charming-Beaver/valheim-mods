@@ -4,6 +4,7 @@ using StorageMaster.UI;
 using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
+using UnityEngine.UI;
 using static StorageMaster.Tests.TestKit;
 
 namespace StorageMaster.Tests
@@ -111,6 +112,40 @@ namespace StorageMaster.Tests
             }
         }
 
+        /// <summary>
+        /// The badges look like the game's weight boxes and, like them, are drawn before the panel's background,
+        /// which covers their inner edge.
+        /// </summary>
+        [Test]
+        private static IEnumerator BadgesLookAndSitLikeTheWeightBoxes()
+        {
+            InventoryGui gui = InventoryGui.instance;
+            gui.Show(SpawnChest());
+            yield return WaitUntil(() => InventoryGui.IsVisible() && Chest != null && Chest.Menu.gameObject.activeInHierarchy, "the chest and its menu");
+            // A click leaves the badge selected; that mustn't change its color.
+            EventSystem.current.SetSelectedGameObject(Inventory.gameObject);
+            yield return InventorySettled();
+            // Buttons fade between colors.
+            yield return new WaitForSecondsRealtime(0.3f);
+
+            foreach (var (badge, weight) in new[] { (Inventory, gui.m_weight.transform.parent), (Chest, gui.m_containerWeight.transform.parent) })
+            {
+                Transform panel = weight.parent;
+                Assert.Equal(weight.GetSiblingIndex() + 1, badge.transform.GetSiblingIndex(), $"{badge.name} drawn right after {Path(weight)}");
+                foreach (string part in new[] { "", "bkg" })
+                {
+                    Image theirs = part == "" ? weight.GetComponent<Image>() : weight.Find(part).GetComponent<Image>();
+                    Image ours = part == "" ? badge.GetComponent<Image>() : badge.transform.Find(part).GetComponent<Image>();
+                    string what = $"{badge.name} {(part == "" ? "frame" : part)}";
+                    Assert.True(ours != null && theirs != null, $"{what} has an image");
+                    Assert.True(ours.sprite == theirs.sprite && ours.material == theirs.material && ours.color == theirs.color && ours.type == theirs.type,
+                        $"{what} looks like the weight box's (sprite {ours.sprite?.name}/{theirs.sprite?.name}, material {ours.material?.name}/{theirs.material?.name}, color {ours.color}/{theirs.color})");
+                    Color shown = ours.canvasRenderer.GetColor(), theirsShown = theirs.canvasRenderer.GetColor();
+                    Assert.True(shown == theirsShown, $"{what} is tinted {shown}, the weight box {theirsShown}");
+                }
+            }
+        }
+
         [Test]
         private static IEnumerator ChestMenuSortsTheChestAndSharesTheOrder()
         {
@@ -177,6 +212,8 @@ namespace StorageMaster.Tests
             Vector2 min = root.InverseTransformPoint(corners[0]), max = root.InverseTransformPoint(corners[2]);
             return Rect.MinMaxRect(min.x, min.y, max.x, max.y);
         }
+
+        private static string Path(Transform t) => t.parent == null ? t.name : t.parent.name + "/" + t.name;
 
         private static Rect Shrink(Rect r, float by) => Rect.MinMaxRect(r.xMin + by, r.yMin + by, r.xMax - by, r.yMax - by);
 

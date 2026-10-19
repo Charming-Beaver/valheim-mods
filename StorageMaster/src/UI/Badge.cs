@@ -30,25 +30,26 @@ namespace StorageMaster.UI
         public static Badge Create(RectTransform panel, RectTransform below, string name, RectTransform menu,
             ConfigEntry<bool> menuOpen, ConfigEntry<int> x, ConfigEntry<int> y)
         {
-            RectTransform rt = UIKit.Rect(panel, name);
-            rt.anchorMin = below.anchorMin;
-            rt.anchorMax = below.anchorMax;
+            // A copy of the weight box (its frame and wooden face, with their materials and colors), so it looks the same,
+            // also when a UI mod restyles that box. Its icon, text and any scripts are removed.
+            GameObject go = Instantiate(below.gameObject, panel, false);
+            go.name = name;
+            RectTransform rt = (RectTransform)go.transform;
             rt.pivot = new Vector2(0.5f, 0.5f);
-            rt.sizeDelta = below.sizeDelta;
-
-            // The weight box is a frame with a wooden face; the badge copies both.
-            Image frame = rt.gameObject.AddComponent<Image>();
-            Image belowFrame = below.GetComponent<Image>();
-            frame.sprite = belowFrame != null ? belowFrame.sprite : UIKit.PanelSprite;
-            frame.type = belowFrame != null ? belowFrame.type : Image.Type.Sliced;
-            Image belowFace = null;
-            foreach (Transform child in below)
+            Image face = null;
+            foreach (Transform child in rt)
             {
-                if (child.name == "bkg") belowFace = child.GetComponent<Image>();
+                if (child.name == "bkg" && face == null && child.TryGetComponent(out Image image))
+                {
+                    face = image;
+                    OnlyLooks(child.gameObject);
+                }
+                else Destroy(child.gameObject);
             }
-            Image face = UIKit.Rect(rt, "bkg").Fill().gameObject.AddComponent<Image>();
-            face.sprite = belowFace != null ? belowFace.sprite : UIKit.PanelSprite;
-            face.color = belowFace != null ? belowFace.color : new Color(0.784f, 0.784f, 0.784f);
+            OnlyLooks(go);
+            if (face == null) face = go.GetComponent<Image>() ?? go.AddComponent<Image>();
+            // Right after the weight box, so the panel's background covers its edge like it covers the game's boxes.
+            rt.SetSiblingIndex(below.GetSiblingIndex() + 1);
 
             // Three bars: the usual sign for a menu.
             for (int i = -1; i <= 1; i++)
@@ -61,8 +62,10 @@ namespace StorageMaster.UI
 
             Badge badge = rt.gameObject.AddComponent<Badge>();
             badge.targetGraphic = face;
+            // Lighter only while the mouse is over it; it stays selected after a click, which mustn't keep it lit.
             ColorBlock colors = badge.colors;
-            colors.highlightedColor = colors.selectedColor = new Color(1f, 0.85f, 0.6f);
+            colors.highlightedColor = new Color(1f, 0.85f, 0.6f);
+            colors.selectedColor = colors.normalColor;
             badge.colors = colors;
             badge.Menu = menu;
             badge.Home = below.anchoredPosition + new Vector2(0f, below.sizeDelta.y + 12f);
@@ -78,6 +81,15 @@ namespace StorageMaster.UI
             menu.SetAsLastSibling();
             badge.Apply();
             return badge;
+        }
+
+        /// <summary>Removes everything but the looks (RectTransform, CanvasRenderer, Image) from a copied object.</summary>
+        private static void OnlyLooks(GameObject go)
+        {
+            foreach (Component c in go.GetComponents<Component>())
+            {
+                if (!(c is RectTransform || c is CanvasRenderer || c is Image)) DestroyImmediate(c);
+            }
         }
 
         public void Toggle()
