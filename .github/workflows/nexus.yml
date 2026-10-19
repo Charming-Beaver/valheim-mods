@@ -5,7 +5,8 @@
 # Nexus' official action and the NEXUSMODS_API_KEY secret. The mod's IDs and file texts come from <Mod>/nexus.json.
 # Release tags look like "storagemaster-v1.0.1"; the part before "-v" picks the mod folder.
 #
-# Run it by hand with dry_run to check the setup (API key, file ID, zip, changelog) without uploading anything.
+# Run it by hand with dry_run to check the setup (API key, file ID, mod ID, zip, changelog) without uploading anything,
+# or with changelog_only to add a version's changelog entry on Nexus without uploading the file again.
 
 name: Publish to Nexus Mods
 
@@ -21,6 +22,10 @@ on:
         description: Only check the setup, don't upload
         type: boolean
         default: true
+      changelog_only:
+        description: Don't upload the file, only add this version's changelog entry on Nexus (when the upload worked but the changelog didn't)
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -31,6 +36,7 @@ jobs:
     env:
       TAG: ${{ github.event.release.tag_name || inputs.tag }}
       DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run }}
+      CHANGELOG_ONLY: ${{ github.event_name == 'workflow_dispatch' && inputs.changelog_only }}
     steps:
       - uses: actions/checkout@v4
 
@@ -80,7 +86,10 @@ jobs:
           printf '%s\n' "$notes"
           { echo "notes<<CHANGELOG_EOF"; printf '%s\n' "$notes"; echo "CHANGELOG_EOF"; } >> "$GITHUB_OUTPUT"
 
-      - name: Check the API key and file ID
+      # nexus.json has the mod's number from its page (game-scoped). The API's /mods/<id> endpoints, like the one the
+      # upload action adds the changelog with, want the mod's global ID instead, which this looks up.
+      - name: Check the API key, file ID and mod ID
+        id: check
         if: steps.mod.outputs.dir != ''
         env:
           NEXUSMODS_API_KEY: ${{ secrets.NEXUSMODS_API_KEY }}
@@ -93,15 +102,36 @@ jobs:
             if [ "$code" = "200" ]; then jq -c '.data | {id, name, version, category, game_scoped_id}' response.json; fi
             if [ "$code" = "401" ]; then echo "The API key was rejected."; exit 1; fi
           done
+          path="games/valheim/mods/${{ steps.mod.outputs.mod_id }}"
+          code=$(curl -s -o response.json -w '%{http_code}' -H "apikey: $NEXUSMODS_API_KEY" "https://api.nexusmods.com/v3/$path")
+          echo "GET /v3/$path: $code"
+          if [ "$code" != "200" ]; then echo "Could not find mod ${{ steps.mod.outputs.mod_id }} on Nexus."; exit 1; fi
+          jq -c '.data | {id, name, game_scoped_id}' response.json
+          echo "api_mod_id=$(jq -r .data.id response.json)" >> "$GITHUB_OUTPUT"
           rm -f response.json
 
+      - name: Add the changelog entry only
+        if: steps.mod.outputs.dir != '' && env.CHANGELOG_ONLY == 'true' && env.DRY_RUN != 'true'
+        env:
+          NEXUSMODS_API_KEY: ${{ secrets.NEXUSMODS_API_KEY }}
+          NOTES: ${{ steps.changelog.outputs.notes }}
+        run: |
+          jq -n --arg version "${{ steps.mod.outputs.version }}" --arg changelog "$NOTES" '{version: $version, changelog: $changelog}' > body.json
+          code=$(curl -s -o response.json -w '%{http_code}' -X POST -H "apikey: $NEXUSMODS_API_KEY" -H "Content-Type: application/json" \
+            --data @body.json "https://api.nexusmods.com/v3/mods/${{ steps.check.outputs.api_mod_id }}/changelogs")
+          echo "POST /v3/mods/${{ steps.check.outputs.api_mod_id }}/changelogs: $code"
+          cat response.json; echo
+          rm -f body.json response.json
+          if [ "$code" != "200" ] && [ "$code" != "201" ]; then exit 1; fi
+
       - name: Upload to Nexus Mods
-        if: steps.mod.outputs.dir != '' && env.DRY_RUN != 'true'
+        if: steps.mod.outputs.dir != '' && env.DRY_RUN != 'true' && env.CHANGELOG_ONLY != 'true'
         # Pinned to v1.0.0-beta.11: the action is still in beta, so updates are taken on purpose.
         uses: Nexus-Mods/upload-action@98532f7670c27cbecc78fae03fa3e278147827e2
         with:
           api_key: ${{ secrets.NEXUSMODS_API_KEY }}
-          mod_id: ${{ steps.mod.outputs.mod_id }}
+          # The global ID: with the page's number, adding the changelog failed with "Mod not found" (1.2.0).
+          mod_id: ${{ steps.check.outputs.api_mod_id }}
           file_id: ${{ steps.mod.outputs.file_id }}
           filename: ${{ steps.mod.outputs.dir }}-${{ steps.mod.outputs.version }}.zip
           version: ${{ steps.mod.outputs.version }}
