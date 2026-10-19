@@ -36,6 +36,12 @@ To check compatibility with other mods, add them from Thunderstore by their `Nam
 
 They're downloaded with their dependencies into `tests/.mods` (once, ignored by git) and installed only for that run.
 
+To try something by hand, `-Play` loads the test world with a few chests and leaves the game to you instead of running the tests (also works with `-With`). The test plugin and any `-With` mods are removed when you close the game.
+
+```
+.\tests\run-tests.ps1 StorageMaster -Play -With seneaL-SeneaL_UI
+```
+
 ### Releasing
 
 1. Raise `Version` in the mod's `src/Plugin.cs` and rename the `## Unreleased` section of its `CHANGELOG.md` to that version. Commit and push.

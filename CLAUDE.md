@@ -55,6 +55,7 @@ In-game tests live in `tests/<Mod>.Tests/` (lowercase `tests`, so it isn't mista
 - Each test starts from a clean state (no test chests, empty inventory, no locks or skips, default settings, no messages). When a mod gets new state that could leak between tests, reset it in `TestKit.Reset`.
 - For a bug, write a test that fails first, then fix it.
 - `-With <Namespace-Name>` runs the tests alongside mods from Thunderstore (e.g. `-With seneaL-SeneaL_UI`), downloaded with their dependencies into the ignored `tests/.mods` and installed only for that run. Use it to reproduce `mod-compatibility` issues. Every test runs in every setup; mark a test that only makes sense with a mod `[RequiresMod("<BepInEx GUID>")]` (the results list the loaded mods' GUIDs). Other people's mods never go into the repo or into `thunderstore.json`, unless the mod can't run without them.
+- When the maintainer wants to try a change by hand, start the game with `-Play` (plus any `-With` mods) in the background: it loads the test world with a few chests and god mode, and cleans up when the game is closed. Rebuilding matters: the last test run may have built something else, and `-Play` builds the current code first.
 - The tests run in single player, so multiplayer paths (chests owned by others, delayed answers) aren't covered. Check those by reading the code and say so.
 
 ## Changes and releases
