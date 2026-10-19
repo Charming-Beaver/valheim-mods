@@ -126,7 +126,7 @@ $marker = Join-Path $configDir "$Mod.Tests.run"
 $results = Join-Path $bepinex "$Mod.Tests.results.txt"
 $screenshots = Join-Path $bepinex "$Mod.Tests.screenshots"
 # Mods write their config files on start; the ones that weren't there before are removed afterwards.
-$configsBefore = @(Get-ChildItem $configDir -File -Recurse | ForEach-Object FullName)
+$configsBefore = @(Get-ChildItem $configDir -Recurse | ForEach-Object FullName)
 
 New-Item -ItemType Directory -Force $pluginDir | Out-Null
 Copy-Item (Join-Path $PSScriptRoot "$Mod.Tests\bin\Debug\netstandard2.1\$Mod.Tests.dll") $pluginDir
@@ -184,6 +184,8 @@ finally {
     Get-Process valheim -ErrorAction SilentlyContinue | Stop-Process -Force
     Remove-Item -Recurse -Force $pluginDir, $testModPlugins, $testModPatchers -ErrorAction SilentlyContinue
     Remove-Item -Force $marker -ErrorAction SilentlyContinue
-    Get-ChildItem $configDir -File -Recurse | Where-Object { $_.FullName -notin $configsBefore } | Remove-Item -Force
+    # Deepest first, so new folders are emptied before they're removed.
+    Get-ChildItem $configDir -Recurse | Where-Object { $_.FullName -notin $configsBefore } |
+        Sort-Object { $_.FullName.Length } -Descending | Remove-Item -Force -Recurse -ErrorAction SilentlyContinue
 }
 if ($failed) { exit 1 }
