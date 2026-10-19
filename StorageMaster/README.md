@@ -4,7 +4,7 @@ Sort your inventory, lock slots, quick stack into nearby chests, and open **ever
 
 Everything looks and feels like Valheim's own UI, and the whole mod runs on your side only: it works on any server, and nobody else needs to install it.
 
-**Download:** [Nexus Mods](https://www.nexusmods.com/valheim/mods/4479) · [GitHub releases](https://github.com/Charming-Beaver/valheim-mods/releases/tag/storagemaster-v1.0.0)
+**Download:** [Nexus Mods](https://www.nexusmods.com/valheim/mods/4479) · [GitHub releases](https://github.com/Charming-Beaver/valheim-mods/releases/tag/storagemaster-v1.0.1)
 
 ![The Storage window: your inventory next to every chest around you](https://raw.githubusercontent.com/Charming-Beaver/valheim-mods/main/StorageMaster/images/overview.jpg)
 
