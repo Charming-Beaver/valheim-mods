@@ -916,6 +916,22 @@ namespace StorageMaster.UI
                 if (BlocksInput || InfoWindow.BlocksInput) __result = true;
             }
 
+            // Other mods (SeneaL UI) blank the game's item tooltips on inventory grids they don't draw themselves, so our
+            // slots would show none. Fill it in the way the game does, right before it decides whether there's a tooltip to show.
+            [HarmonyPatch(typeof(UITooltip), nameof(UITooltip.OnHoverStart)), HarmonyPrefix]
+            private static void FillItemTooltip(UITooltip __instance)
+            {
+                if (!IsOpen) return;
+                InventoryElement element = __instance.GetComponentInParent<InventoryElement>();
+                InventoryGrid grid = element != null ? element.GetComponentInParent<InventoryGrid>() : null;
+                if (grid == null || grid.m_inventory == null || (grid != _playerGrid && !_cards.Any(c => c.Grid == grid))) return;
+                ItemDrop.ItemData item = grid.m_inventory.GetItemAt(element.Position.x, element.Position.y);
+                if (item == null) return;
+                __instance.m_topic = item.m_shared.m_name;
+                __instance.m_text = item.GetTooltip();
+                __instance.m_anchor = grid.m_tooltipAnchor;
+            }
+
             [HarmonyPatch(typeof(ZInput), nameof(ZInput.GetMouseScrollWheel)), HarmonyPrefix]
             private static bool BlockScroll(ref float __result)
             {

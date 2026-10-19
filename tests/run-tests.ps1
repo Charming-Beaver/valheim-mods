@@ -17,11 +17,18 @@
 
 .EXAMPLE
     .\tests\run-tests.ps1 StorageMaster -With seneaL-SeneaL_UI
+
+.EXAMPLE
+    .\tests\run-tests.ps1 StorageMaster -Play
+    Loads the test world with a few chests and leaves the game to you instead of running the tests. The test plugin
+    and any -With mods are removed when you close the game.
 #>
 param(
     [string]$Mod = 'StorageMaster',
     # Thunderstore packages as Namespace-Name, optionally with -Version (latest when left out).
     [string[]]$With = @(),
+    # Only load the test world (with a few chests), for trying things by hand. Waits until the game is closed.
+    [switch]$Play,
     # Found through Steam when left out.
     [string]$ValheimDir,
     [int]$TimeoutMinutes = 15
@@ -129,7 +136,7 @@ foreach ($package in $packages) {
 }
 if (Test-Path $results) { Remove-Item $results }
 if (Test-Path $screenshots) { Remove-Item -Recurse $screenshots }
-Set-Content -Path $marker -Value 'Run the tests on the next start' -Encoding utf8
+Set-Content -Path $marker -Value $(if ($Play) { 'play' } else { 'Run the tests on the next start' }) -Encoding utf8
 
 $failed = $true
 try {
@@ -149,7 +156,7 @@ try {
                 $line = $lines[$shown]
                 $color = switch -Regex ($line) { '^PASS' { 'Green' } '^(FAIL|ABORT)' { 'Red' } '^SKIP' { 'Yellow' } default { 'Gray' } }
                 Write-Host $line -ForegroundColor $color
-                if ($line -match '^(DONE|ABORT)') { $done = $line }
+                if ($line -match '^(DONE|ABORT|READY)') { $done = $line }
             }
         }
         if ($done) { break }
@@ -157,7 +164,11 @@ try {
         elseif (((Get-Date) - $lastSeen).TotalSeconds -gt 30) { throw 'Valheim closed before the tests finished. See BepInEx\LogOutput.log.' }
         if ((Get-Date) -gt $deadline) { throw "The tests didn't finish within $TimeoutMinutes minutes." }
     }
-    $failed = $done -notmatch '^DONE \d+ passed, 0 failed'
+    if ($done -match '^READY') {
+        Write-Host 'Close Valheim when you are done; the test plugin is removed then.'
+        while (Get-Process valheim -ErrorAction SilentlyContinue) { Start-Sleep -Seconds 2 }
+    }
+    $failed = $done -notmatch '^(DONE \d+ passed, 0 failed|READY)'
     if (Test-Path $screenshots) { Write-Host "Screenshots: $screenshots" }
 }
 finally {

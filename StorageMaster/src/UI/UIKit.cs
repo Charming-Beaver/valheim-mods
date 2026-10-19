@@ -399,11 +399,24 @@ namespace StorageMaster.UI
             if (string.IsNullOrEmpty(text)) return;
             UITooltip tip = go.GetComponent<UITooltip>() ?? go.AddComponent<UITooltip>();
             tip.m_text = text;
-            if (InventoryGui.instance != null)
+            tip.m_tooltipPrefab = TooltipPrefab();
+        }
+
+        /// <summary>
+        /// The game's tooltip, taken from an inventory slot. Other mods (SeneaL UI) can leave tooltips elsewhere in the
+        /// inventory without one, which would make hovering ours fail.
+        /// </summary>
+        private static GameObject TooltipPrefab()
+        {
+            InventoryGui gui = InventoryGui.instance;
+            if (gui == null) return null;
+            UITooltip slot = gui.m_playerGrid != null && gui.m_playerGrid.m_elementPrefab != null ? gui.m_playerGrid.m_elementPrefab.GetComponent<UITooltip>() : null;
+            if (slot != null && slot.m_tooltipPrefab != null) return slot.m_tooltipPrefab;
+            foreach (UITooltip t in gui.GetComponentsInChildren<UITooltip>(true))
             {
-                UITooltip src = InventoryGui.instance.GetComponentInChildren<UITooltip>(true);
-                if (src != null) tip.m_tooltipPrefab = src.m_tooltipPrefab;
+                if (t.m_tooltipPrefab != null) return t.m_tooltipPrefab;
             }
+            return null;
         }
             // ------------------------------------------------------------------ extras for PlayerCheats
 

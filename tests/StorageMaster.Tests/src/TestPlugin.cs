@@ -26,6 +26,7 @@ namespace StorageMaster.Tests
 
         internal static ManualLogSource Log;
         private static string _resultsPath;
+        private static bool _play;
 
         private void Awake()
         {
@@ -36,6 +37,8 @@ namespace StorageMaster.Tests
                 Log.LogInfo($"No {MarkerFile} in BepInEx/config, tests stay off");
                 return;
             }
+            // "play" (run-tests.ps1 -Play) only loads the test world, for trying things by hand.
+            _play = File.ReadAllText(marker).Trim() == "play";
             // Removed straight away: if the game crashes, the next normal start is a normal game again.
             File.Delete(marker);
             _resultsPath = Path.Combine(Paths.BepInExRootPath, ResultsFile);
@@ -60,6 +63,13 @@ namespace StorageMaster.Tests
             {
                 Write($"ABORT Could not load the test world: {startError()}");
                 Finish(0, 1);
+                yield break;
+            }
+            if (_play)
+            {
+                IEnumerator setup = Flatten(SetUpPlayArea(), out Func<Exception> setupError);
+                while (setup.MoveNext()) yield return setup.Current;
+                Write(setupError() == null ? "READY Test world loaded, the game is yours" : $"READY Test world loaded, but setting up chests failed: {setupError()}");
                 yield break;
             }
 
@@ -100,6 +110,22 @@ namespace StorageMaster.Tests
                 }
             }
             Finish(passed, failed, skipped);
+        }
+
+        /// <summary>A few chests with items next to the player, to try the Storage window with.</summary>
+        private static IEnumerator SetUpPlayArea()
+        {
+            string[] items = { "Wood", "Stone", "Resin", "Flint", "Raspberry", "LeatherScraps", "DeerHide", "Coins" };
+            for (int c = 0; c < 4; c++)
+            {
+                Container chest = TestKit.SpawnChest(3f + c, c * 70f);
+                yield return null;
+                for (int i = 0; i < 4; i++) TestKit.Put(chest.GetInventory(), items[(c * 3 + i) % items.Length], 5 + 10 * i, i, 0);
+            }
+            // The test character's inventory is only for testing.
+            TestKit.Mine.RemoveAll();
+            TestKit.Put(TestKit.Mine, "Wood", 20, 0, 1);
+            TestKit.Put(TestKit.Mine, "Stone", 15, 1, 1);
         }
 
         private static IEnumerator Wrap(MethodInfo test)
