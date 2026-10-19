@@ -69,3 +69,4 @@ In-game tests live in `tests/<Mod>.Tests/` (lowercase `tests`, so it isn't mista
 2. Create the `mod: <FolderName>` label.
 3. Add the folder name to the "Which mod?" dropdown in `.github/ISSUE_TEMPLATE/bug_report.yml` and `feature_request.yml`. `.github/workflows/label-mod.yml` uses the answer to label new issues.
 4. Releases are tagged `<foldername lowercase>-v<version>` (e.g. `storagemaster-v1.0.1`). `.github/workflows/thunderstore.yml` uses the part before `-v` to find the mod folder, which needs a `thunderstore.toml`.
+5. For Nexus: upload the first version by hand (that creates the mod page and its main file), then add `<FolderName>/nexus.json` with the mod ID, the file ID (Files tab, "Advanced"), the file's display name and description. From then on `.github/workflows/nexus.yml` uploads each published release as a new version of that file.

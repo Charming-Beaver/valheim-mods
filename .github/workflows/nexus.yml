@@ -1,0 +1,113 @@
+# Uploads a mod to Nexus Mods when its GitHub release is published, as a new version of the mod's existing main file
+# (like "Update existing file" on the website), so Vortex and the Nexus app see it as an update.
+#
+# release.ps1 builds <Mod>-<version>.zip and attaches it to the release; this workflow takes that zip and uploads it with
+# Nexus' official action and the NEXUSMODS_API_KEY secret. The mod's IDs and file texts come from <Mod>/nexus.json.
+# Release tags look like "storagemaster-v1.0.1"; the part before "-v" picks the mod folder.
+#
+# Run it by hand with dry_run to check the setup (API key, file ID, zip, changelog) without uploading anything.
+
+name: Publish to Nexus Mods
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag to upload, e.g. storagemaster-v1.0.1
+        required: true
+      dry_run:
+        description: Only check the setup, don't upload
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    env:
+      TAG: ${{ github.event.release.tag_name || inputs.tag }}
+      DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Find the mod for this release
+        id: mod
+        run: |
+          mod="${TAG%-v*}"
+          version="${TAG##*-v}"
+          dir=""
+          for d in */; do
+            d="${d%/}"
+            if [ "${d,,}" = "$mod" ] && [ -f "$d/nexus.json" ]; then dir="$d"; fi
+          done
+          if [ -z "$dir" ]; then
+            echo "No mod folder with nexus.json matches tag $TAG, nothing to upload."
+            echo "dir=" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          {
+            echo "dir=$dir"
+            echo "version=$version"
+            echo "mod_id=$(jq -r .modId "$dir/nexus.json")"
+            echo "file_id=$(jq -r .fileId "$dir/nexus.json")"
+            echo "display_name=$(jq -r .displayName "$dir/nexus.json")"
+            echo "description=$(jq -r .description "$dir/nexus.json")"
+          } >> "$GITHUB_OUTPUT"
+          echo "$dir $version: mod $(jq -r .modId "$dir/nexus.json"), file $(jq -r .fileId "$dir/nexus.json")"
+
+      - name: Download the zip from the release
+        if: steps.mod.outputs.dir != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release download "$TAG" --repo "${{ github.repository }}" --pattern "${{ steps.mod.outputs.dir }}-${{ steps.mod.outputs.version }}.zip"
+          ls -l *.zip
+
+      # The release notes come from the same section of CHANGELOG.md.
+      - name: Take this version's changelog
+        id: changelog
+        if: steps.mod.outputs.dir != ''
+        run: |
+          notes=$(awk -v v="${{ steps.mod.outputs.version }}" '
+            { sub(/\r$/, "") }
+            $0 ~ "^## " { if (found) exit; if ($2 == v) { found = 1; next } }
+            found { print }' "${{ steps.mod.outputs.dir }}/CHANGELOG.md" | sed '/./,$!d')
+          if [ -z "$notes" ]; then echo "CHANGELOG.md has no '## ${{ steps.mod.outputs.version }}' section."; exit 1; fi
+          printf '%s\n' "$notes"
+          { echo "notes<<CHANGELOG_EOF"; printf '%s\n' "$notes"; echo "CHANGELOG_EOF"; } >> "$GITHUB_OUTPUT"
+
+      - name: Check the API key and file ID
+        if: steps.mod.outputs.dir != ''
+        env:
+          NEXUSMODS_API_KEY: ${{ secrets.NEXUSMODS_API_KEY }}
+        run: |
+          if [ -z "$NEXUSMODS_API_KEY" ]; then echo "The NEXUSMODS_API_KEY secret is missing."; exit 1; fi
+          id="${{ steps.mod.outputs.file_id }}"
+          for path in "mod-files/$id" "games/valheim/mod-file-versions/$id"; do
+            code=$(curl -s -o response.json -w '%{http_code}' -H "apikey: $NEXUSMODS_API_KEY" "https://api.nexusmods.com/v3/$path")
+            echo "GET /v3/$path: $code"
+            if [ "$code" = "200" ]; then jq -c '.data | {id, name, version, category, game_scoped_id}' response.json; fi
+            if [ "$code" = "401" ]; then echo "The API key was rejected."; exit 1; fi
+          done
+          rm -f response.json
+
+      - name: Upload to Nexus Mods
+        if: steps.mod.outputs.dir != '' && env.DRY_RUN != 'true'
+        # Pinned to v1.0.0-beta.11: the action is still in beta, so updates are taken on purpose.
+        uses: Nexus-Mods/upload-action@98532f7670c27cbecc78fae03fa3e278147827e2
+        with:
+          api_key: ${{ secrets.NEXUSMODS_API_KEY }}
+          mod_id: ${{ steps.mod.outputs.mod_id }}
+          file_id: ${{ steps.mod.outputs.file_id }}
+          filename: ${{ steps.mod.outputs.dir }}-${{ steps.mod.outputs.version }}.zip
+          version: ${{ steps.mod.outputs.version }}
+          display_name: ${{ steps.mod.outputs.display_name }}
+          description: ${{ steps.mod.outputs.description }}
+          category: main
+          archive_existing_version: true
+          update_mod_version: true
+          changelog: ${{ steps.changelog.outputs.notes }}
