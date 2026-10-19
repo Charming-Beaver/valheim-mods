@@ -44,8 +44,8 @@ To try something by hand, `-Play` loads the test world with a few chests and lea
 
 ### Releasing
 
-1. Raise `Version` in the mod's `src/Plugin.cs` and rename the `## Unreleased` section of its `CHANGELOG.md` to that version. Commit and push.
-2. Run `.\release.ps1 StorageMaster`. It builds both zips (GitHub/Nexus and Thunderstore) and creates a **draft** GitHub release.
+1. Run `.\version.ps1 StorageMaster patch` (fixes only), `minor` (new features), `major` or an exact version like `1.3.0`. It sets the version in `src/Plugin.cs` and `thunderstore.toml`, renames the `## Unreleased` section of `CHANGELOG.md` to it, and opens a PR on a new branch. `-DryRun` only shows what it would do. Merge the PR.
+2. On main, run `.\release.ps1 StorageMaster`. It builds both zips (GitHub/Nexus and Thunderstore) and creates a **draft** GitHub release.
 3. Test the build in game, then publish the draft on GitHub. The **Publish to Thunderstore** and **Publish to Nexus Mods** workflows upload it to both sites. On Nexus it becomes the new version of the mod's main file, with the changelog section; the previous version stays downloadable under "Old".
 
 The Nexus upload needs the `NEXUSMODS_API_KEY` secret (a personal API key from [Nexus](https://www.nexusmods.com/settings/api-keys)) and the mod's `nexus.json` with its mod and file ID. To check the setup without uploading, run **Publish to Nexus Mods** by hand with a release tag; it does a dry run by default.

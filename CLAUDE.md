@@ -62,7 +62,7 @@ In-game tests live in `tests/<Mod>.Tests/` (lowercase `tests`, so it isn't mista
 - Work on a branch and open a PR. The maintainer merges them.
 - When a PR is for an issue, start its title with the issue number, e.g. `#12: Quick stack pressed twice keeps the first press's summary`, and put `Fixes #12` (or `Closes #12` for non-bugs) in the body so merging closes the issue. PRs without an issue get a plain title.
 - Commit messages: a short summary line, then a plain explanation of what changed and why.
-- Add a line for every player-facing change under `## Unreleased` at the top of the mod's `CHANGELOG.md`, creating the section if it's missing. Don't add version sections: the maintainer picks the version and renames `Unreleased` when releasing.
+- Add a line for every player-facing change under `## Unreleased` at the top of the mod's `CHANGELOG.md`, creating the section if it's missing. Don't add version sections: the maintainer picks the version, and `.\version.ps1 <Mod> patch|minor|major` (or an exact version) sets it, renames `Unreleased` and opens the release PR. `patch` is for fixes only, `minor` for new features.
 - Inside a version, group the lines under `### Added` (new features), `### Changed` (existing behavior that works differently), `### Fixed` (bugs) and, when needed, `### Removed`, in that order, leaving out empty ones. A change that can break something for players (a renamed setting, a moved hotkey) goes first in Changed, starting with **Breaking:**.
 
 ## Adding a new mod
