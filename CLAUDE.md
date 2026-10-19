@@ -9,7 +9,7 @@ Valheim (BepInEx 5) mods by Charming Beaver. Each mod lives in its own top-level
 - Type: `bug`, `enhancement`, `question`, etc. (GitHub defaults).
 - Area: `ui` (layout, rendering, usability of windows and buttons), `sorting` (Sort, Tidy up, Gather here, Quick stack, locked slots), `performance` (freezes, slowness).
 - `mod-compatibility`: conflicts or integration with *other people's* mods or modpacks.
-- Source: `reddit-feedback` for reports from the r/ModdedValheim release thread. Create a similar label for other sources (e.g. Nexus) when needed.
+- Source, where the report came from: `source: <Place>`, e.g. `source: Reddit` (the r/ModdedValheim release thread) and `source: Nexus` (the mod's posts on Nexus Mods). Create one for a new source when needed. Issues found by us (e.g. by the tests) get no source label.
 - Create a new label when an issue needs one rather than squeezing it into an existing one.
 
 ### Issue body
