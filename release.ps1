@@ -32,8 +32,13 @@ $version = $Matches[1]
 $name = if ($plugin -match 'Name\s*=\s*"([^"]+)"') { $Matches[1] } else { $Mod }
 $tag = "$($Mod.ToLowerInvariant())-v$version"
 
+# "release not found" is the answer we hope for. Windows PowerShell 5.1 would treat that error output as a failure
+# under 'Stop', so only the exit code counts here.
+$ErrorActionPreference = 'Continue'
 gh release view $tag --repo $repo *> $null
-if ($LASTEXITCODE -eq 0) { throw "Release $tag already exists. Raise the version in Plugin.cs first." }
+$exists = $LASTEXITCODE -eq 0
+$ErrorActionPreference = 'Stop'
+if ($exists) { throw "Release $tag already exists. Raise the version in Plugin.cs first." }
 
 # The notes are this version's section of the changelog.
 $changelog = Get-Content (Join-Path $project 'CHANGELOG.md') -Raw
