@@ -179,6 +179,12 @@ namespace StorageMaster.UI
 
         // ------------------------------------------------------------------ frame
 
+        public static void FocusSearch()
+        {
+            _search.Select();
+            _search.ActivateInputField();
+        }
+
         public static void Update()
         {
             if (!IsOpen) return;
@@ -196,6 +202,8 @@ namespace StorageMaster.UI
                 _swallowUntilFrame = Time.frameCount + 1;
                 return;
             }
+            // F jumps into Find item, as in the build menu (unless you're typing somewhere already).
+            if (Input.GetKeyDown(KeyCode.F) && !UIKit.TextFieldFocused()) FocusSearch();
 
             // Drop chests that were destroyed or that you walked away from.
             bool removed = false;
@@ -278,7 +286,8 @@ namespace StorageMaster.UI
             UIKit.Tooltip(settingsButton.gameObject, "How far away and how many chests the Storage window opens.");
 
             // Top bar.
-            _search = UIKit.InputField(window, "Find item...", 300, 38);
+            // F focuses it, like the build menu's search it's copied from (and whose F hint it keeps).
+            _search = UIKit.InputField(window, "Find item...", 300, 38, findKeyHint: true);
             Place(_search.transform, 24, 72, 300, 38);
             float x = 340;
             x = TopButton(window, "Tidy up", TidyUp, x, 120,

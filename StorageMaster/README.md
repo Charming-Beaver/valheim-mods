@@ -48,7 +48,7 @@ Opens every chest around you at once, next to your inventory, using the game's o
   - **Shift + click** to take half a stack
   - **Ctrl + click** to send an item straight to you, or from you to a chest that already has it
   - **Esc** puts a carried item back
-- **Find item:** type a name and every matching slot in every chest lights up; the rest fade out.
+- **Find item:** press **F** (as in the build menu) or click the field, type a name and every matching slot in every chest lights up; the rest fade out.
 
 ![Find item highlights every match in every chest](https://raw.githubusercontent.com/Charming-Beaver/valheim-mods/main/StorageMaster/images/find-item.jpg)
 

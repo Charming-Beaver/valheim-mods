@@ -451,8 +451,12 @@ namespace StorageMaster.UI
         }
             // ------------------------------------------------------------------ extras for PlayerCheats
 
-        /// <summary>A clone of the build menu's search box, or a plain field built from game sprites if that isn't available.</summary>
-        public static TMP_InputField InputField(Transform parent, string placeholder, float width, float height, bool plain = false)
+        /// <summary>
+        /// A clone of the build menu's search box, or a plain field built from game sprites if that isn't available.
+        /// The clone's key hint (F, which focuses the build menu's search) is kept only with <paramref name="findKeyHint"/>,
+        /// for a field that F focuses too.
+        /// </summary>
+        public static TMP_InputField InputField(Transform parent, string placeholder, float width, float height, bool plain = false, bool findKeyHint = false)
         {
             TMP_InputField field = null;
             GameObject template = plain ? null : Hud.instance != null && Hud.instance.m_buildUi != null && Hud.instance.m_buildUi.m_searchField != null
@@ -466,6 +470,10 @@ namespace StorageMaster.UI
                 {
                     if (pad.m_hint != null) UnityEngine.Object.Destroy(pad.m_hint);
                     UnityEngine.Object.Destroy(pad);
+                }
+                if (!findKeyHint)
+                {
+                    foreach (UIInputHint hint in go.GetComponentsInChildren<UIInputHint>(true)) UnityEngine.Object.DestroyImmediate(hint.gameObject);
                 }
                 field = go.GetComponent<TMP_InputField>();
                 field.onValueChanged = new TMP_InputField.OnChangeEvent();

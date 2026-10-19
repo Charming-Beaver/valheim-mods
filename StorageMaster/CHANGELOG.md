@@ -10,6 +10,7 @@
 - New Options window (button in the inventory menu, Shift + F6) for hotkeys, settings and the menu buttons, with Reset to bring back a menu button moved out of reach. Info now explains the features and lists your hotkeys
 - The menus, the Storage window, Info and Options use the inventory's darker background
 - Find item in the Storage window lights up the slots of matching items without tinting the items themselves, so they keep their full color
+- F jumps into Find item in the Storage window, as in the build menu. The other text fields no longer show an F key that does nothing
 
 ## 1.0.1
 
