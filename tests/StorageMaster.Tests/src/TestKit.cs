@@ -57,6 +57,8 @@ namespace StorageMaster.Tests
                      {
                          Plugin.SortMode, Plugin.AutoSort, Plugin.QuickStackRange, Plugin.QuickStackSkipsHotbar,
                          Plugin.StorageRange, Plugin.StorageMaxChests, Plugin.StorageShowInventory,
+                         Plugin.DragKey, Plugin.InventoryMenuOpen, Plugin.InventoryBadgeX, Plugin.InventoryBadgeY,
+                         Plugin.ChestMenuOpen, Plugin.ChestBadgeX, Plugin.ChestBadgeY,
                      })
             {
                 entry.BoxedValue = entry.DefaultValue;
@@ -130,6 +132,20 @@ namespace StorageMaster.Tests
                 if (Time.realtimeSinceStartup > end) throw new AssertionException($"Timed out waiting for: {what}");
                 yield return null;
             }
+        }
+
+        /// <summary>Waits for the inventory's opening animation, which slides the panels in.</summary>
+        public static IEnumerator InventorySettled()
+        {
+            Vector3 last = Vector3.positiveInfinity;
+            int still = 0;
+            yield return WaitUntil(() =>
+            {
+                Vector3 now = InventoryGui.instance.m_player.position;
+                still = now == last ? still + 1 : 0;
+                last = now;
+                return still >= 5;
+            }, "the inventory to stop moving");
         }
 
         public static IEnumerator Frames(int count)

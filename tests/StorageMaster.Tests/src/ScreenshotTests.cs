@@ -15,7 +15,7 @@ namespace StorageMaster.Tests
             Lock(0, 1);
             InventoryGui.instance.Show(null);
             yield return WaitUntil(InventoryGui.IsVisible, "inventory to open");
-            yield return Frames(5);
+            yield return InventorySettled();
 
             Assert.True(StorageMaster.InventoryButtons._sort != null && StorageMaster.InventoryButtons._sort.gameObject.activeInHierarchy, "Sort button shown");
             yield return Screenshot("inventory");
@@ -28,7 +28,7 @@ namespace StorageMaster.Tests
             Put(chest.GetInventory(), "Stone", 10, 0, 0);
             InventoryGui.instance.Show(chest);
             yield return WaitUntil(InventoryGui.IsVisible, "chest to open");
-            yield return Frames(5);
+            yield return InventorySettled();
 
             Assert.True(StorageMaster.InventoryButtons._sortChest != null && StorageMaster.InventoryButtons._sortChest.gameObject.activeInHierarchy,
                 "Sort chest button shown");

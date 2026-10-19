@@ -164,6 +164,26 @@ namespace StorageMaster.UI
             return img;
         }
 
+        /// <summary>
+        /// A panel with the inventory's own dark background (sprite, material and color copied from it), or the
+        /// lighter wooden panel if that isn't there.
+        /// </summary>
+        public static Image DarkPanel(Transform parent, string name = "panel")
+        {
+            Image img = Panel(parent, name);
+            InventoryGui gui = InventoryGui.instance;
+            Transform bkg = gui != null && gui.m_player != null ? gui.m_player.Find("Bkg") : null;
+            if (bkg != null && bkg.TryGetComponent(out Image inventory) && inventory.sprite != null)
+            {
+                img.sprite = inventory.sprite;
+                img.type = inventory.type;
+                img.material = inventory.material;
+                img.color = inventory.color;
+                img.pixelsPerUnitMultiplier = inventory.pixelsPerUnitMultiplier;
+            }
+            return img;
+        }
+
         /// <summary>The darker recessed background used inside wooden panels.</summary>
         public static Image Inset(Transform parent, string name = "inset", float alpha = 0.55f)
         {
@@ -287,6 +307,17 @@ namespace StorageMaster.UI
             r.Size(width, height);
             if (onClick != null) b.onClick.AddListener(onClick);
             return b;
+        }
+
+        /// <summary>The game's button sounds on our own button (it must already have its Button).</summary>
+        public static void ButtonSound(GameObject go)
+        {
+            ButtonSfx template = _buttonTemplate != null ? _buttonTemplate.GetComponent<ButtonSfx>() : null;
+            if (template == null) return;
+            ButtonSfx sfx = go.AddComponent<ButtonSfx>();
+            sfx.m_sfxPrefab = template.m_sfxPrefab;
+            sfx.m_selectSfxPrefab = template.m_selectSfxPrefab;
+            sfx.m_enterSfxPrefab = template.m_enterSfxPrefab;
         }
 
         public static void SetLabel(this Button b, string label)

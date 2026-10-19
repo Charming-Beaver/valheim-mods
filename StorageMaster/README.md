@@ -16,7 +16,8 @@ Everything looks and feels like Valheim's own UI, and the whole mod runs on your
 
 ![The buttons next to your inventory, and naming a chest in the normal chest window](https://raw.githubusercontent.com/Charming-Beaver/valheim-mods/main/StorageMaster/images/inventory-buttons.jpg)
 
-- A **Sort** button next to your inventory tidies everything **below the hotbar**. Your hotbar row is never moved.
+- The buttons are in a **menu next to your inventory**: click the box with three bars (above your weight) to open or close it. **Ctrl + drag** the box to move it, for example out of another mod's way (the key can be changed in the Info window).
+- **Sort** tidies everything **below the hotbar**. Your hotbar row is never moved.
 - Partial stacks of the same item are merged first, so three stacks of 30 wood become one stack of 90.
 - **By: …** switches what Sort orders by:
   - **Name A–Z** and **Name Z–A**
@@ -24,7 +25,7 @@ Everything looks and feels like Valheim's own UI, and the whole mod runs on your
   - **Quality**: best first
   - **Weight**: heaviest first
   - **Amount**: biggest stacks first
-- **Sort chest** appears next to any chest you open and sorts it the same way.
+- **Sort chest** is in the menu next to any chest you open and sorts it the same way.
 - **Auto-sort** (optional) sorts your inventory every time you pick something up.
 
 ### Locked slots
@@ -80,7 +81,7 @@ Opens every chest around you at once, next to your inventory, using the game's o
 The title of the normal chest window (opened with **E**) is a text field too. Click it, type a name and press **Enter**. While you type, your keys only type: E won't close the chest and WASD won't move you.
 
 ### Info window
-The **Info** button next to your inventory explains every feature. It also lets you **change hotkeys** (with warnings when Valheim already uses a key) and adjust the main settings in game.
+The **Info** button in the inventory menu explains every feature. It also lets you **change hotkeys** (with warnings when Valheim already uses a key) and adjust the main settings in game.
 
 ![The Info window with clickable hotkeys](https://raw.githubusercontent.com/Charming-Beaver/valheim-mods/main/StorageMaster/images/info-window.jpg)
 
@@ -93,6 +94,7 @@ The **Info** button next to your inventory explains every feature. It also lets 
 | Open the Storage window | `Shift + F1` |
 | Sort inventory | `Shift + F4` |
 | Quick stack | `Shift + F3` |
+| Info window | `Shift + F6` |
 | Auto-sort on / off | not set |
 | Info window | not set |
 | Lock / unlock a slot | `Alt + click` |

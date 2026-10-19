@@ -23,6 +23,14 @@ namespace StorageMaster
         public static ConfigEntry<int> StorageMaxChests;
         public static ConfigEntry<bool> StorageShowInventory;
 
+        public enum DragKeys { Ctrl, Shift, Alt }
+
+        public static ConfigEntry<DragKeys> DragKey;
+        public static ConfigEntry<bool> InventoryMenuOpen;
+        public static ConfigEntry<int> InventoryBadgeX, InventoryBadgeY;
+        public static ConfigEntry<bool> ChestMenuOpen;
+        public static ConfigEntry<int> ChestBadgeX, ChestBadgeY;
+
         public static ConfigEntry<KeyboardShortcut> StorageKey;
         public static ConfigEntry<KeyboardShortcut> SortKey;
         public static ConfigEntry<KeyboardShortcut> QuickStackKey;
@@ -39,6 +47,9 @@ namespace StorageMaster
         {
             SortMode = Config.Bind("Sorting", "SortMode", Sorter.Mode.NameAsc, "What Sort orders by.");
             AutoSort = Config.Bind("Sorting", "AutoSort", false, "Sort the inventory every time you pick something up.");
+            // The buttons show these, also when they're changed in the config file or a config manager.
+            SortMode.SettingChanged += (_, __) => InventoryButtons.Refresh();
+            AutoSort.SettingChanged += (_, __) => InventoryButtons.Refresh();
             QuickStackRange = Config.Bind("QuickStack", "Range", 10f, "Meters around you in which chests are used by quick stack.");
             QuickStackSkipsHotbar = Config.Bind("QuickStack", "SkipHotbar", true, "Quick stack leaves the hotbar row alone.");
 
@@ -46,11 +57,26 @@ namespace StorageMaster
             StorageMaxChests = Config.Bind("Storage", "MaxChests", 24, "Most chests the Storage window opens at once (nearest first).");
             StorageShowInventory = Config.Bind("Storage", "ShowInventory", true, "Show your inventory in the Storage window. Off gives the chests the whole window.");
 
+            DragKey = Config.Bind("Menus", "DragKey", DragKeys.Ctrl, "Hold this key and drag a menu button (the box with three bars) to move it.");
+            InventoryMenuOpen = Config.Bind("Menus", "InventoryMenuOpen", true, "Whether the menu next to your inventory is open.");
+            InventoryBadgeX = Config.Bind("Menus", "InventoryButtonX", 0, "How far the inventory's menu button was moved to the right of its usual place (negative: to the left).");
+            InventoryBadgeY = Config.Bind("Menus", "InventoryButtonY", 0, "How far the inventory's menu button was moved up from its usual place (negative: down).");
+            ChestMenuOpen = Config.Bind("Menus", "ChestMenuOpen", true, "Whether the menu next to an open chest is open.");
+            ChestBadgeX = Config.Bind("Menus", "ChestButtonX", 0, "How far the chest's menu button was moved to the right of its usual place (negative: to the left).");
+            ChestBadgeY = Config.Bind("Menus", "ChestButtonY", 0, "How far the chest's menu button was moved up from its usual place (negative: down).");
+
             StorageKey = Config.Bind("Hotkeys", "Storage", new KeyboardShortcut(KeyCode.F1, KeyCode.LeftShift), "Open all nearby chests in one window.");
             SortKey = Config.Bind("Hotkeys", "SortInventory", new KeyboardShortcut(KeyCode.F4, KeyCode.LeftShift), "Sort your inventory (not the hotbar).");
             QuickStackKey = Config.Bind("Hotkeys", "QuickStack", new KeyboardShortcut(KeyCode.F3, KeyCode.LeftShift), "Put items into nearby chests that already hold the same kind of item.");
             AutoSortKey = Config.Bind("Hotkeys", "ToggleAutoSort", KeyboardShortcut.Empty, "Switch auto-sort on pickup on or off.");
-            InfoKey = Config.Bind("Hotkeys", "Info", KeyboardShortcut.Empty, "Open the Storage Master info window.");
+            InfoKey = Config.Bind("Hotkeys", "InfoWindow", new KeyboardShortcut(KeyCode.F6, KeyCode.LeftShift),
+                "Open the Storage Master info window (where a menu button moved out of reach can be reset).");
+            // Up to 1.0.1 this was "Info" without a key. Everyone's config file already holds that empty value, so the new
+            // default only reaches players under a new name; a key someone did choose is kept.
+            ConfigEntry<KeyboardShortcut> oldInfoKey = Config.Bind("Hotkeys", "Info", KeyboardShortcut.Empty, "Replaced by InfoWindow.");
+            if (!oldInfoKey.Value.Equals(KeyboardShortcut.Empty)) InfoKey.Value = oldInfoKey.Value;
+            Config.Remove(oldInfoKey.Definition);
+            Config.Save();
 
             Hotkeys.Add((StorageKey, "Storage window", "Open all nearby chests in one window."));
             Hotkeys.Add((SortKey, "Sort inventory", "Sort everything below the hotbar."));
