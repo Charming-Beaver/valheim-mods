@@ -197,15 +197,15 @@ namespace StorageMaster.Tests
         }
 
         [Test]
-        private static IEnumerator InfoWindowShowsAndSetsTheBadgePosition()
+        private static IEnumerator OptionsShowAndSetTheBadgePosition()
         {
             yield return ShowInventory();
             Inventory.MoveTo(new Vector2(-30f, 25f));
             InventoryGui.instance.Hide();
-            InfoWindow.Open();
+            OptionsWindow.Open();
             yield return Frames(2);
 
-            TMP_InputField[] fields = InfoWindow._root.GetComponentsInChildren<TMP_InputField>()
+            TMP_InputField[] fields = OptionsWindow._window.Root.GetComponentsInChildren<TMP_InputField>()
                 .Where(f => f.transform.parent.name == "set_Inventory menu button").ToArray();
             Assert.Equal(2, fields.Length, "X and Y fields");
             Assert.Equal("-30", fields[0].text, "X shown");
@@ -214,7 +214,7 @@ namespace StorageMaster.Tests
             fields[0].text = "-80";
             fields[0].onEndEdit.Invoke(fields[0].text);
             Assert.Equal(-80, Plugin.InventoryBadgeX.Value, "X typed in");
-            InfoWindow.Close();
+            OptionsWindow.Close();
             yield return ShowInventory();
             Assert.Equal(Inventory.Home + new Vector2(-80f, 25f), Inventory.Rect.anchoredPosition, "Badge position");
         }

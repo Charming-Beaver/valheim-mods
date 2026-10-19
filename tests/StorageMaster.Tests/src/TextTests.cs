@@ -30,35 +30,44 @@ namespace StorageMaster.Tests
         }
 
         [Test]
-        private static IEnumerator InfoWindowTextRenders()
+        private static IEnumerator InfoAndOptionsTextRenders()
         {
             InfoWindow.Open();
             yield return Frames(3);
-
-            AssertAllRender(InfoWindow._root);
+            AssertAllRender(InfoWindow._window.Root);
+            OptionsWindow.Open();
+            yield return Frames(3);
+            AssertAllRender(OptionsWindow._window.Root);
         }
 
         /// <summary>
-        /// The Info window's rows are laid out one below the other (#8: in one player's setup with 1.0.0 they all stayed
-        /// on top of each other at the top of the window). Most useful with -With.
+        /// The Info and Options windows' rows are laid out one below the other (#8: in one player's setup with 1.0.0
+        /// they all stayed on top of each other at the top of the window). Most useful with -With.
         /// </summary>
         [Test]
-        private static IEnumerator InfoWindowLaysOutItsRows()
+        private static IEnumerator InfoAndOptionsLayOutTheirRows()
         {
             InfoWindow.Open();
             yield return Frames(3);
+            AssertRowsLaidOut(InfoWindow._window.Root);
+            OptionsWindow.Open();
+            yield return Frames(3);
+            AssertRowsLaidOut(OptionsWindow._window.Root);
+        }
 
-            UnityEngine.UI.ScrollRect scroll = InfoWindow._root.GetComponentInChildren<UnityEngine.UI.ScrollRect>();
+        private static void AssertRowsLaidOut(GameObject root)
+        {
+            UnityEngine.UI.ScrollRect scroll = root.GetComponentInChildren<UnityEngine.UI.ScrollRect>();
             RectTransform content = scroll.content;
-            Assert.True(content.childCount > 20, $"Rows in the window: {content.childCount}");
-            Assert.True(content.rect.width > scroll.viewport.rect.width * 0.9f, $"Rows are as wide as the window (rows {content.rect.width:0}, window {scroll.viewport.rect.width:0})");
-            Assert.True(content.rect.height > scroll.viewport.rect.height, $"The rows are taller than the window (rows {content.rect.height:0}, window {scroll.viewport.rect.height:0})");
+            Assert.True(content.childCount > 10, $"Rows in {root.name}: {content.childCount}");
+            Assert.True(content.rect.width > scroll.viewport.rect.width * 0.9f, $"{root.name}: rows are as wide as the window (rows {content.rect.width:0}, window {scroll.viewport.rect.width:0})");
+            Assert.True(content.rect.height > scroll.viewport.rect.height, $"{root.name}: the rows are taller than the window (rows {content.rect.height:0}, window {scroll.viewport.rect.height:0})");
             float last = float.MaxValue;
             for (int i = 0; i < content.childCount; i++)
             {
                 var row = (RectTransform)content.GetChild(i);
                 if (!row.gameObject.activeSelf) continue;
-                Assert.True(row.anchoredPosition.y < last, $"Row {i} ({row.name}) is below the one before (y {row.anchoredPosition.y:0}, before {last:0})");
+                Assert.True(row.anchoredPosition.y < last, $"{root.name}: row {i} ({row.name}) is below the one before (y {row.anchoredPosition.y:0}, before {last:0})");
                 last = row.anchoredPosition.y;
             }
         }
@@ -74,7 +83,7 @@ namespace StorageMaster.Tests
                      {
                          StorageMaster.InventoryButtons._sort, StorageMaster.InventoryButtons._mode, StorageMaster.InventoryButtons._quickStack,
                          StorageMaster.InventoryButtons._autoSort, StorageMaster.InventoryButtons._storage, StorageMaster.InventoryButtons._info,
-                         StorageMaster.InventoryButtons._sortChest, StorageMaster.InventoryButtons._chestMode,
+                         StorageMaster.InventoryButtons._options, StorageMaster.InventoryButtons._sortChest, StorageMaster.InventoryButtons._chestMode,
                      })
             {
                 Assert.True(button != null, "Button created");
@@ -101,7 +110,10 @@ namespace StorageMaster.Tests
                 AssertAllRender(StorageWindow._root);
                 InfoWindow.Open();
                 yield return Frames(3);
-                AssertAllRender(InfoWindow._root);
+                AssertAllRender(InfoWindow._window.Root);
+                OptionsWindow.Open();
+                yield return Frames(3);
+                AssertAllRender(OptionsWindow._window.Root);
             }
             finally
             {
@@ -134,6 +146,8 @@ namespace StorageMaster.Tests
                 StorageWindow.ToggleSettings();
                 InfoWindow.Open();
                 yield return Frames(3);
+                OptionsWindow.Open();
+                yield return Frames(3);
             }
             finally
             {
@@ -154,16 +168,12 @@ namespace StorageMaster.Tests
             StorageMaster.InventoryButtons._badge = StorageMaster.InventoryButtons._chestBadge = null;
             StorageMaster.InventoryButtons._sort = StorageMaster.InventoryButtons._mode = StorageMaster.InventoryButtons._quickStack =
                 StorageMaster.InventoryButtons._autoSort = StorageMaster.InventoryButtons._storage = StorageMaster.InventoryButtons._info =
-                    StorageMaster.InventoryButtons._sortChest = StorageMaster.InventoryButtons._chestMode = null;
+                    StorageMaster.InventoryButtons._options = StorageMaster.InventoryButtons._sortChest = StorageMaster.InventoryButtons._chestMode = null;
             StorageWindow.Close();
-            InfoWindow.Close();
             if (StorageWindow._root != null) Object.Destroy(StorageWindow._root);
-            if (InfoWindow._root != null) Object.Destroy(InfoWindow._root);
             StorageWindow._root = null;
-            InfoWindow._root = null;
-            // Building the Info window adds to these; the mod itself never builds it twice.
-            InfoWindow._keyRows.Clear();
-            InfoWindow._refreshers.Clear();
+            InfoWindow._window.Destroy();
+            OptionsWindow._window.Destroy();
             UIKit.Ready = false;
             yield return null;
         }

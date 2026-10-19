@@ -16,7 +16,7 @@ Everything looks and feels like Valheim's own UI, and the whole mod runs on your
 
 ![The buttons next to your inventory, and naming a chest in the normal chest window](https://raw.githubusercontent.com/Charming-Beaver/valheim-mods/main/StorageMaster/images/inventory-buttons.jpg)
 
-- The buttons are in a **menu next to your inventory**: click the box with three bars (above your weight) to open or close it. **Ctrl + drag** the box to move it, for example out of another mod's way (the key can be changed in the Info window).
+- The buttons are in a **menu next to your inventory**: click the box with three bars (above your weight) to open or close it. **Ctrl + drag** the box to move it, for example out of another mod's way (the key can be changed in Options).
 - **Sort** tidies everything **below the hotbar**. Your hotbar row is never moved.
 - Partial stacks of the same item are merged first, so three stacks of 30 wood become one stack of 90.
 - **By: …** switches what Sort orders by:
@@ -80,8 +80,10 @@ Opens every chest around you at once, next to your inventory, using the game's o
 ### Name chests anywhere
 The title of the normal chest window (opened with **E**) is a text field too. Click it, type a name and press **Enter**. While you type, your keys only type: E won't close the chest and WASD won't move you.
 
-### Info window
-The **Info** button in the inventory menu explains every feature. It also lets you **change hotkeys** (with warnings when Valheim already uses a key) and adjust the main settings in game.
+### Info and Options
+The **Info** button in the inventory menu explains every feature and lists your hotkeys.
+
+**Options** (next to it, or **Shift + F6**) lets you **change hotkeys** (with warnings when Valheim already uses a key), adjust the main settings, and choose the drag key and the menu buttons' positions. **Reset** there puts a menu button back if you've moved it out of reach.
 
 ![The Info window with clickable hotkeys](https://raw.githubusercontent.com/Charming-Beaver/valheim-mods/main/StorageMaster/images/info-window.jpg)
 
@@ -94,12 +96,12 @@ The **Info** button in the inventory menu explains every feature. It also lets y
 | Open the Storage window | `Shift + F1` |
 | Sort inventory | `Shift + F4` |
 | Quick stack | `Shift + F3` |
-| Info window | `Shift + F6` |
+| Options | `Shift + F6` |
 | Auto-sort on / off | not set |
 | Info window | not set |
 | Lock / unlock a slot | `Alt + click` |
 
-Change them in the **Info** window. Click a key, then press the new one; Esc cancels and Backspace removes the key. You can also edit them in the config file.
+Change them in **Options**. Click a key, then press the new one; Esc cancels and Backspace removes the key. You can also edit them in the config file.
 
 ---
 
@@ -126,7 +128,7 @@ Change them in the **Info** window. Click a key, then press the new one; Esc can
 
 ## Configuration
 
-All settings live in `BepInEx/config/charmingbeaver.valheim.storagemaster.cfg`. Most of them can also be changed in game from the **Info** window and the Storage window's **Settings**.
+All settings live in `BepInEx/config/charmingbeaver.valheim.storagemaster.cfg`. Most of them can also be changed in game from **Options** and the Storage window's **Settings**.
 
 | Section | Setting | Default | |
 |---|---|---|---|
