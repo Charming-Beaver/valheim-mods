@@ -43,7 +43,7 @@ namespace StorageMaster.Tests
             Assert.True(Mine.ContainsItem(club), "Equipped club stays with me");
         }
 
-        [Test]
+        [Test, SkipWithMod(ExtraSlotsCompat.Guid, "keeps hotbar items out of Place stacks (its setting \"Prevent Stack All of hotbar items\")")]
         private static IEnumerator MovesTheHotbarWhenAllowed()
         {
             Plugin.QuickStackSkipsHotbar.Value = false;
@@ -91,7 +91,7 @@ namespace StorageMaster.Tests
         }
 
         /// <summary>The game's own "Place stacks" button keeps locked slots too (but not the hotbar).</summary>
-        [Test]
+        [Test, SkipWithMod(ExtraSlotsCompat.Guid, "keeps hotbar items out of Place stacks (its setting \"Prevent Stack All of hotbar items\")")]
         private static void PlaceStacksKeepsLockedSlots()
         {
             Container chest = SpawnChest();

@@ -29,18 +29,20 @@ namespace StorageMaster
             if (player == null || IsDragging(silent)) return;
 
             Inventory inventory = player.GetInventory();
-            int width = inventory.GetWidth(), height = inventory.GetHeight();
+            // Only the regular rows: ExtraSlots' slots below them stay as they are.
+            int width = inventory.GetWidth(), height = ExtraSlotsCompat.PlayerRows(inventory);
 
             // Free slots: everything below the hotbar that isn't locked, in reading order.
             var slots = new List<Vector2i>();
             for (int y = 1; y < height; y++)
                 for (int x = 0; x < width; x++)
-                    if (!Locks.IsLocked(x, y)) slots.Add(new Vector2i(x, y));
+                    if (!Locks.IsLocked(x, y) && !ExtraSlotsCompat.IsSlot(new Vector2i(x, y))) slots.Add(new Vector2i(x, y));
 
             var items = new List<ItemDrop.ItemData>();
             foreach (ItemDrop.ItemData item in inventory.GetAllItems())
             {
-                if (item.m_gridPos.y >= 1 && !Locks.IsLocked(item.m_gridPos.x, item.m_gridPos.y)) items.Add(item);
+                Vector2i pos = item.m_gridPos;
+                if (pos.y >= 1 && !Locks.IsLocked(pos.x, pos.y) && !ExtraSlotsCompat.IsOutsideRegularRows(inventory, pos)) items.Add(item);
             }
             if (items.Count == 0)
             {

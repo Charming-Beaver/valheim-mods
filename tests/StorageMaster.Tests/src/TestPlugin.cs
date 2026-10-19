@@ -89,6 +89,13 @@ namespace StorageMaster.Tests
                     Write($"SKIP {name}: needs {string.Join(", ", missing.Select(r => r.Guid))}");
                     continue;
                 }
+                var present = test.GetCustomAttributes<SkipWithModAttribute>().Where(s => Chainloader.PluginInfos.ContainsKey(s.Guid)).ToList();
+                if (present.Count > 0)
+                {
+                    skipped++;
+                    Write($"SKIP {name}: {string.Join("; ", present.Select(s => $"{s.Guid} {s.Reason}"))}");
+                    continue;
+                }
                 float started = Time.realtimeSinceStartup;
                 IEnumerator body = Flatten(Wrap(test), out Func<Exception> error);
                 while (body.MoveNext()) yield return body.Current;
@@ -229,6 +236,23 @@ namespace StorageMaster.Tests
         public RequiresModAttribute(string guid)
         {
             Guid = guid;
+        }
+    }
+
+    /// <summary>
+    /// Skips the test when another mod is loaded that changes on purpose what the test checks, e.g. ExtraSlots keeping
+    /// hotbar items out of "Place stacks". The reason shows in the results.
+    /// </summary>
+    [AttributeUsage(AttributeTargets.Method, AllowMultiple = true)]
+    public class SkipWithModAttribute : Attribute
+    {
+        public readonly string Guid;
+        public readonly string Reason;
+
+        public SkipWithModAttribute(string guid, string reason)
+        {
+            Guid = guid;
+            Reason = reason;
         }
     }
 
