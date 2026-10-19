@@ -108,6 +108,7 @@ namespace StorageMaster
         {
             if (player.IsItemEquiped(item)) return false;
             if (Locks.IsLocked(item.m_gridPos.x, item.m_gridPos.y)) return false;
+            if (ExtraSlotsCompat.IsOutsideRegularRows(player.GetInventory(), item.m_gridPos)) return false;
             return !(item.m_gridPos.y == 0 && Plugin.QuickStackSkipsHotbar.Value);
         }
 
@@ -125,7 +126,9 @@ namespace StorageMaster
                 int before = __instance.CountItems(null);
                 foreach (ItemDrop.ItemData item in new List<ItemDrop.ItemData>(fromInventory.GetAllItems()))
                 {
-                    bool allowed = _ours ? CanMove(player, item) : !player.IsItemEquiped(item) && !Locks.IsLocked(item.m_gridPos.x, item.m_gridPos.y);
+                    bool allowed = _ours
+                        ? CanMove(player, item)
+                        : !player.IsItemEquiped(item) && !Locks.IsLocked(item.m_gridPos.x, item.m_gridPos.y) && !ExtraSlotsCompat.IsOutsideRegularRows(fromInventory, item.m_gridPos);
                     if (allowed && __instance.ContainsItemByName(item.m_shared.m_name) && __instance.AddItem(item))
                     {
                         fromInventory.RemoveItem(item);

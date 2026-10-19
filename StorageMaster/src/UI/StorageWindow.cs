@@ -224,6 +224,7 @@ namespace StorageMaster.UI
                 Inventory mine = player.GetInventory();
                 FitPlayerGrid(mine);
                 _playerGrid.UpdateInventory(mine, player, _heldItem);
+                HideSlotRows(mine);
                 Highlight(_playerGrid, mine);
                 Locks.DrawOverlays(_playerGrid);
             }
@@ -574,12 +575,26 @@ namespace StorageMaster.UI
         private static void FitPlayerGrid(Inventory inv)
         {
             float w = inv.GetWidth() * Space;
-            float h = inv.GetHeight() * Space;
+            float h = ExtraSlotsCompat.PlayerRows(inv) * Space;
             float available = H - GridTop - SelH - 40;
             float scale = Mathf.Min(1f, available / h, LeftW / w);
             RectTransform rt = (RectTransform)_playerGrid.transform;
             rt.localScale = new Vector3(scale, scale, 1);
             rt.sizeDelta = new Vector2(w, h);
+        }
+
+        /// <summary>
+        /// ExtraSlots' slots are rows below the regular inventory. They're shown in ExtraSlots' own panel, and dropping
+        /// things into them here would skip its checks, so the window only shows the regular rows.
+        /// </summary>
+        private static void HideSlotRows(Inventory inv)
+        {
+            if (!ExtraSlotsCompat.Active) return;
+            foreach (InventoryElement element in _playerGrid.m_elements)
+            {
+                bool slot = ExtraSlotsCompat.IsOutsideRegularRows(inv, element.Position);
+                if (element.gameObject.activeSelf == slot) element.gameObject.SetActive(!slot);
+            }
         }
 
         // ------------------------------------------------------------------ clicks
