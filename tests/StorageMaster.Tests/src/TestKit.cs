@@ -33,6 +33,7 @@ namespace StorageMaster.Tests
         {
             StorageWindow.Close();
             InfoWindow.Close();
+            OptionsWindow.Close();
             if (InventoryGui.IsVisible()) InventoryGui.instance.Hide();
             if (InventoryGui.instance != null) InventoryGui.instance.m_dragItem = null;
 

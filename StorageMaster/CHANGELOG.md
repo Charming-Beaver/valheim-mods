@@ -6,9 +6,9 @@
 - The Storage window says how many chests are over the Max chests limit, and Tidy up, Sort all, Gather here and Quick stack say when chests were left out because they were still opening or in use by someone else
 - Tidy up and Gather here no longer fill the log with "Trying to add item to occupied slot" warnings when chests are nearly full
 - Works with ExtraSlots: Sort, auto-sort, Quick stack and Gather here leave its equipment, food, ammo, misc and quick slots alone, and the Storage window shows only your regular inventory rows
-- The buttons next to the inventory and the chest are now in menus that open from a small box above the weight. Ctrl + drag the box to move it out of other mods' way (key and position can be set in the Info window); the menus remember whether they're open
-- The Info window opens with Shift + F6 by default, so a menu button moved out of reach can always be reset there. A key you had set for it is kept
-- The menus, the Storage window and the Info window use the inventory's darker background
+- The buttons next to the inventory and the chest are now in menus that open from a small box above the weight. Ctrl + drag the box to move it out of other mods' way (key and position can be set in Options); the menus remember whether they're open
+- New Options window (button in the inventory menu, Shift + F6) for hotkeys, settings and the menu buttons, with Reset to bring back a menu button moved out of reach. Info now explains the features and lists your hotkeys
+- The menus, the Storage window, Info and Options use the inventory's darker background
 - Find item in the Storage window lights up the slots of matching items without tinting the items themselves, so they keep their full color
 
 ## 1.0.1

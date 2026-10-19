@@ -13,7 +13,7 @@ namespace StorageMaster
     {
         private const float ButtonW = 160f, ButtonH = 36f, Gap = 4f, Pad = 8f;
 
-        private static Button _sort, _mode, _quickStack, _autoSort, _storage, _info, _sortChest, _chestMode;
+        private static Button _sort, _mode, _quickStack, _autoSort, _storage, _info, _options, _sortChest, _chestMode;
         private static Badge _badge, _chestBadge;
 
         public static void Ensure()
@@ -31,7 +31,7 @@ namespace StorageMaster
             }
             if (!UIKit.Init() || gui.m_weight == null) return;
 
-            RectTransform menu = Menu("StorageMaster_Menu", 6);
+            RectTransform menu = Menu("StorageMaster_Menu", 7);
             _sort = Make(menu, "Sort", () => Sorter.SortPlayer(silent: false), 0,
                 "Sorts everything below the hotbar and merges partial stacks.\nAlt + click a slot to lock it, so Sort leaves it alone.");
             _mode = Make(menu, "", Sorter.CycleMode, 1, "Click to change what Sort orders by.");
@@ -40,7 +40,9 @@ namespace StorageMaster
             _autoSort = Make(menu, "", Plugin.ToggleAutoSort, 3, "Sort automatically every time you pick something up.");
             _storage = Make(menu, "Storage", StorageWindow.Open, 4,
                 "Opens every chest nearby in one window, to move, find, gather and tidy up items.");
-            _info = Make(menu, "Info", InfoWindow.Open, 5, "How Storage Master works, its hotkeys and settings.");
+            _info = Make(menu, "Info", InfoWindow.Open, 5, "How Storage Master works, and its hotkeys.");
+            _options = Make(menu, "Options", OptionsWindow.Open, 6,
+                "Hotkeys, settings, and the menu buttons' drag key and positions (Reset puts a menu button back).");
             _badge = Badge.Create(gui.m_player, BoxOf(gui.m_player, gui.m_weight), "StorageMaster_Badge", menu,
                 Plugin.InventoryMenuOpen, Plugin.InventoryBadgeX, Plugin.InventoryBadgeY, gui.m_armor != null ? BoxOf(gui.m_player, gui.m_armor) : null);
 

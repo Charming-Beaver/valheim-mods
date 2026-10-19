@@ -93,6 +93,7 @@ namespace StorageMaster.UI
             }
             if (_root == null) Build();
             InfoWindow.Close();
+            OptionsWindow.Close();
             if (InventoryGui.IsVisible()) InventoryGui.instance.Hide();
             _root.SetActive(true);
             _root.transform.SetAsLastSibling();
@@ -991,7 +992,7 @@ namespace StorageMaster.UI
             [HarmonyPatch(typeof(InventoryGui), nameof(InventoryGui.IsVisible)), HarmonyPostfix]
             private static void InventoryVisible(ref bool __result)
             {
-                if (BlocksInput || InfoWindow.BlocksInput) __result = true;
+                if (BlocksInput || ScrollWindow.AnyBlocksInput) __result = true;
             }
 
             // Other mods (SeneaL UI) blank the game's item tooltips on inventory grids they don't draw themselves, so our
@@ -1013,7 +1014,7 @@ namespace StorageMaster.UI
             [HarmonyPatch(typeof(ZInput), nameof(ZInput.GetMouseScrollWheel)), HarmonyPrefix]
             private static bool BlockScroll(ref float __result)
             {
-                if (!BlocksInput && !InfoWindow.BlocksInput) return true;
+                if (!BlocksInput && !ScrollWindow.AnyBlocksInput) return true;
                 __result = 0f;
                 return false;
             }
@@ -1033,7 +1034,7 @@ namespace StorageMaster.UI
 
                 private static bool Prefix(ref bool __result)
                 {
-                    if (!BlocksInput && !InfoWindow.BlocksInput && !ChestRename.BlocksInput) return true;
+                    if (!BlocksInput && !ScrollWindow.AnyBlocksInput && !ChestRename.BlocksInput) return true;
                     __result = false;
                     return false;
                 }

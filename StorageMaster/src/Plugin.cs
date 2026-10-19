@@ -36,8 +36,9 @@ namespace StorageMaster
         public static ConfigEntry<KeyboardShortcut> QuickStackKey;
         public static ConfigEntry<KeyboardShortcut> AutoSortKey;
         public static ConfigEntry<KeyboardShortcut> InfoKey;
+        public static ConfigEntry<KeyboardShortcut> OptionsKey;
 
-        /// <summary>All hotkeys with a name and description, for the Info window.</summary>
+        /// <summary>All hotkeys with a name and description, for the Info and Options windows.</summary>
         public static readonly List<(ConfigEntry<KeyboardShortcut> entry, string title, string description)> Hotkeys =
             new List<(ConfigEntry<KeyboardShortcut>, string, string)>();
 
@@ -69,20 +70,16 @@ namespace StorageMaster
             SortKey = Config.Bind("Hotkeys", "SortInventory", new KeyboardShortcut(KeyCode.F4, KeyCode.LeftShift), "Sort your inventory (not the hotbar).");
             QuickStackKey = Config.Bind("Hotkeys", "QuickStack", new KeyboardShortcut(KeyCode.F3, KeyCode.LeftShift), "Put items into nearby chests that already hold the same kind of item.");
             AutoSortKey = Config.Bind("Hotkeys", "ToggleAutoSort", KeyboardShortcut.Empty, "Switch auto-sort on pickup on or off.");
-            InfoKey = Config.Bind("Hotkeys", "InfoWindow", new KeyboardShortcut(KeyCode.F6, KeyCode.LeftShift),
-                "Open the Storage Master info window (where a menu button moved out of reach can be reset).");
-            // Up to 1.0.1 this was "Info" without a key. Everyone's config file already holds that empty value, so the new
-            // default only reaches players under a new name; a key someone did choose is kept.
-            ConfigEntry<KeyboardShortcut> oldInfoKey = Config.Bind("Hotkeys", "Info", KeyboardShortcut.Empty, "Replaced by InfoWindow.");
-            if (!oldInfoKey.Value.Equals(KeyboardShortcut.Empty)) InfoKey.Value = oldInfoKey.Value;
-            Config.Remove(oldInfoKey.Definition);
-            Config.Save();
+            InfoKey = Config.Bind("Hotkeys", "Info", KeyboardShortcut.Empty, "Open the Storage Master info window.");
+            OptionsKey = Config.Bind("Hotkeys", "Options", new KeyboardShortcut(KeyCode.F6, KeyCode.LeftShift),
+                "Open the Storage Master options (where a menu button moved out of reach can be reset).");
 
             Hotkeys.Add((StorageKey, "Storage window", "Open all nearby chests in one window."));
             Hotkeys.Add((SortKey, "Sort inventory", "Sort everything below the hotbar."));
             Hotkeys.Add((QuickStackKey, "Quick stack", "Put items into nearby chests that already hold the same kind."));
             Hotkeys.Add((AutoSortKey, "Auto-sort on/off", "Switch sorting on pickup on or off."));
-            Hotkeys.Add((InfoKey, "Info", "Open this window."));
+            Hotkeys.Add((InfoKey, "Info", "Open the help window."));
+            Hotkeys.Add((OptionsKey, "Options", "Open this window."));
 
             _harmony = new Harmony(Guid);
             _harmony.PatchAll(typeof(Plugin).Assembly);
@@ -104,6 +101,7 @@ namespace StorageMaster
             QuickStack.Update();
             StorageWindow.Update();
             InfoWindow.Update();
+            OptionsWindow.Update();
 
             if (IsTyping())
             {
@@ -112,8 +110,9 @@ namespace StorageMaster
             // Also skip the frame a key change finishes, so the new key doesn't fire straight away.
             if (capturing || KeyCapture.Active) return;
             if (InfoKey.Value.IsDown()) InfoWindow.Toggle();
+            if (OptionsKey.Value.IsDown()) OptionsWindow.Toggle();
             if (StorageKey.Value.IsDown()) StorageWindow.Toggle();
-            if (StorageWindow.IsOpen || InfoWindow.IsOpen) return;
+            if (StorageWindow.IsOpen || ScrollWindow.AnyOpen) return;
             if (SortKey.Value.IsDown()) Sorter.SortPlayer(silent: false);
             if (QuickStackKey.Value.IsDown()) QuickStack.Run();
             if (AutoSortKey.Value.IsDown()) ToggleAutoSort();
