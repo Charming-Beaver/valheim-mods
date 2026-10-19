@@ -38,6 +38,31 @@ namespace StorageMaster.Tests
             AssertAllRender(InfoWindow._root);
         }
 
+        /// <summary>
+        /// The Info window's rows are laid out one below the other (#8: in one player's setup with 1.0.0 they all stayed
+        /// on top of each other at the top of the window). Most useful with -With.
+        /// </summary>
+        [Test]
+        private static IEnumerator InfoWindowLaysOutItsRows()
+        {
+            InfoWindow.Open();
+            yield return Frames(3);
+
+            UnityEngine.UI.ScrollRect scroll = InfoWindow._root.GetComponentInChildren<UnityEngine.UI.ScrollRect>();
+            RectTransform content = scroll.content;
+            Assert.True(content.childCount > 20, $"Rows in the window: {content.childCount}");
+            Assert.True(content.rect.width > scroll.viewport.rect.width * 0.9f, $"Rows are as wide as the window (rows {content.rect.width:0}, window {scroll.viewport.rect.width:0})");
+            Assert.True(content.rect.height > scroll.viewport.rect.height, $"The rows are taller than the window (rows {content.rect.height:0}, window {scroll.viewport.rect.height:0})");
+            float last = float.MaxValue;
+            for (int i = 0; i < content.childCount; i++)
+            {
+                var row = (RectTransform)content.GetChild(i);
+                if (!row.gameObject.activeSelf) continue;
+                Assert.True(row.anchoredPosition.y < last, $"Row {i} ({row.name}) is below the one before (y {row.anchoredPosition.y:0}, before {last:0})");
+                last = row.anchoredPosition.y;
+            }
+        }
+
         [Test]
         private static IEnumerator InventoryButtonTextRenders()
         {
