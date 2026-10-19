@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- Tidy up brings items together much more completely when chests are nearly full: it merges partial stacks first and keeps going until nothing more can be moved
+- The Storage window says how many chests are over the Max chests limit, and Tidy up, Sort all, Gather here and Quick stack say when chests were left out because they were still opening or in use by someone else
+
 ## 1.0.1
 
 - Pressing Quick stack again within a second no longer replaces the summary with a wrong "the chests are full" message

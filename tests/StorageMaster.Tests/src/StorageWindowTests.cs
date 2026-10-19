@@ -1,4 +1,4 @@
-﻿using System.Collections;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using StorageMaster.UI;
@@ -205,6 +205,94 @@ namespace StorageMaster.Tests
                 .Where(t => t.GetComponent<InventoryElement>() == null && t.m_tooltipPrefab == null)
                 .Select(t => t.name).ToList();
             Assert.True(missing.Count == 0, $"{missing.Count} tooltips have nothing to show, e.g. {missing.FirstOrDefault()}");
+        }
+
+        /// <summary>
+        /// After Tidy up, an item is only spread over several chests if they're full (#7). Random but repeatable setups:
+        /// six chests, some nearly full, with partial stacks of several items scattered over them. (Seed 3 found the bug.)
+        /// </summary>
+        [Test]
+        private static IEnumerator TidyUpLeavesNothingSpreadOutUnlessChestsAreFull()
+        {
+            string[] kinds = { "Wood", "Stone", "Resin", "Flint", "Raspberry", "BoneFragments", "RoundLog", "LeatherScraps" };
+            for (int seed = 1; seed <= 20; seed++)
+            {
+                var random = new System.Random(seed);
+                var chests = new List<Container>();
+                for (int i = 0; i < 6; i++) chests.Add(SpawnChest(3f + i * 0.8f, i * 60f));
+                foreach (Container chest in chests)
+                {
+                    Inventory inv = chest.GetInventory();
+                    int slots = inv.GetWidth() * inv.GetHeight();
+                    int fill = random.Next(0, slots + 1);
+                    for (int s = 0; s < fill; s++)
+                    {
+                        string kind = kinds[random.Next(kinds.Length)];
+                        Put(inv, kind, random.Next(1, 51), s % inv.GetWidth(), s / inv.GetWidth());
+                    }
+                }
+                var before = kinds.ToDictionary(k => k, k => chests.Sum(c => Count(c.GetInventory(), k)));
+
+                yield return OpenAndWait();
+                StorageWindow.TidyUp();
+
+                foreach (string kind in kinds)
+                {
+                    Assert.Equal(before[kind], chests.Sum(c => Count(c.GetInventory(), kind)), $"Seed {seed}: {kind} in total");
+                    var holders = chests.Where(c => Count(c.GetInventory(), kind) > 0).ToList();
+                    if (holders.Count < 2) continue;
+                    // Spread out is only fine if no holder could take more of it.
+                    var roomy = holders.Where(c => c.GetInventory().CanAddItem(NewItem(kind), 1)).ToList();
+                    Assert.True(roomy.Count <= 1,
+                        $"Seed {seed}: {kind} is in {holders.Count} chests and {roomy.Count} of them still have room: " +
+                        string.Join("; ", holders.Select(c => $"{Count(c.GetInventory(), kind)} ({c.GetInventory().GetAllItems().Count}/{c.GetInventory().GetWidth() * c.GetInventory().GetHeight()} slots)")));
+                }
+
+                StorageWindow.Close();
+                yield return Reset();
+            }
+        }
+
+        /// <summary>Chests over the Max chests limit don't take part, so the window says how many there are (#7).</summary>
+        [Test]
+        private static IEnumerator SaysHowManyChestsAreOverTheLimit()
+        {
+            Plugin.StorageMaxChests.Value = 2;
+            SpawnChest(3f, 0f);
+            SpawnChest(4f, 90f);
+            SpawnChest(5f, 180f);
+
+            yield return OpenAndWait();
+            yield return Frames(2);
+
+            string summary = StorageWindow._summary.text;
+            Assert.True(summary.Contains("1 more over the Max chests limit"), $"Summary: \"{summary}\"");
+        }
+
+        /// <summary>Tidy up says which chests it had to leave out: still opening, or open for someone else (#7).</summary>
+        [Test]
+        private static IEnumerator TidyUpSaysWhichChestsWereLeftOut()
+        {
+            Container a = SpawnChest(3f, 0f), b = SpawnChest(4f, 90f), c = SpawnChest(5f, 180f);
+            Put(a.GetInventory(), "Wood", 20, 0, 0);
+            Put(b.GetInventory(), "Wood", 5, 0, 0);
+            Put(c.GetInventory(), "Wood", 7, 0, 0);
+            yield return OpenAndWait();
+            // As if c hadn't answered yet (on a server that takes a moment).
+            StorageWindow.Card waiting = StorageWindow._cards.First(card => card.Chest == c);
+            waiting.Claimed = false;
+
+            StorageWindow.TidyUp();
+
+            string shown = MessageHud.instance.m_messageCenterText.text;
+            Assert.True(shown.Contains("1 chest was left out: 1 still opening"), $"Message: \"{shown}\"");
+            Assert.Equal(7, Count(c.GetInventory(), "Wood"), "Wood in the chest that was still opening");
+            Assert.Equal(25, Count(a.GetInventory(), "Wood"), "Wood brought together in the other chests");
+
+            waiting.Denied = true;
+            StorageWindow.TidyUp();
+            shown = MessageHud.instance.m_messageCenterText.text;
+            Assert.True(shown.Contains("1 in use by someone else"), $"Message: \"{shown}\"");
         }
 
         // ------------------------------------------------------------------ helpers
