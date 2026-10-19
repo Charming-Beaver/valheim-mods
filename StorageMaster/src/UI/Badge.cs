@@ -82,6 +82,8 @@ namespace StorageMaster.UI
             menu.SetParent(panel, false);
             menu.anchorMin = menu.anchorMax = rt.anchorMin;
             menu.SetAsLastSibling();
+            // An open menu is never covered, e.g. by the crafting panel. Its tooltips go into its layer too, so they show.
+            OnTop(menu.gameObject, true, 2);
             badge.Apply();
             return badge;
         }
@@ -93,6 +95,51 @@ namespace StorageMaster.UI
             {
                 if (!(c is RectTransform || c is CanvasRenderer || c is Image)) DestroyImmediate(c);
             }
+        }
+
+        /// <summary>
+        /// Draws an object over the rest of the inventory screen (the crafting panel and so on) with a layer of its own,
+        /// or takes that layer away again so it's drawn in its place among its siblings.
+        /// </summary>
+        private static void OnTop(GameObject go, bool on, int above)
+        {
+            Canvas canvas = go.GetComponent<Canvas>();
+            if (!on)
+            {
+                if (canvas == null) return;
+                // Without its own layer the badge's tooltip goes into the inventory screen's, which is drawn over the panel.
+                DestroyImmediate(go.GetComponent<GraphicRaycaster>());
+                DestroyImmediate(canvas);
+                return;
+            }
+            if (canvas == null)
+            {
+                canvas = go.AddComponent<Canvas>();
+                // A layer of its own needs its own raycaster to be clicked.
+                go.AddComponent<GraphicRaycaster>();
+            }
+            // Set every time: Unity drops it when the layer was added while the inventory was hidden.
+            Canvas screen = go.transform.parent.GetComponentInParent<Canvas>();
+            int order = (screen != null ? screen.sortingOrder : 0) + above;
+            if (!canvas.overrideSorting) canvas.overrideSorting = true;
+            if (canvas.sortingOrder != order) canvas.sortingOrder = order;
+        }
+
+        /// <summary>Whether the badge overlaps its panel, the game's boxes or ExtraSlots' panel (the things drawn over it).</summary>
+        private bool OverItsPanel()
+        {
+            Bounds mine = RectTransformUtility.CalculateRelativeRectTransformBounds(Parent, Rect);
+            mine.Expand(new Vector3(0f, 0f, 1f));
+            Rect panel = Parent.rect;
+            if (new Bounds(panel.center, new Vector3(panel.width, panel.height, 1f)).Intersects(mine)) return true;
+            foreach (Transform sibling in Parent)
+            {
+                if (!sibling.gameObject.activeInHierarchy || !(sibling.name.StartsWith("ExtraSlots") || System.Array.IndexOf(Boxes, sibling) >= 0)) continue;
+                Bounds theirs = RectTransformUtility.CalculateRelativeRectTransformBounds(Parent, sibling);
+                theirs.Expand(new Vector3(0f, 0f, 1f));
+                if (theirs.size.x > 0f && theirs.Intersects(mine)) return true;
+            }
+            return false;
         }
 
         public void Toggle()
@@ -120,6 +167,8 @@ namespace StorageMaster.UI
             KeepUnder();
             Rect.anchoredPosition = Home + (_moving ? _live : new Vector2(X.Value, Y.Value));
             Rect.anchoredPosition += ShiftOnScreen(Rect);
+            // Over its own panel it goes under it like the game's boxes; anywhere else nothing may cover it, so it can't be lost.
+            OnTop(gameObject, !OverItsPanel(), 1);
             if (GetComponent<UITooltip>() is UITooltip tip)
             {
                 tip.m_topic = Plugin.Name;
@@ -129,6 +178,7 @@ namespace StorageMaster.UI
             bool open = MenuOpen.Value;
             if (Menu.gameObject.activeSelf != open) Menu.gameObject.SetActive(open);
             if (!open) return;
+            OnTop(Menu.gameObject, true, 2);
             // Next to the badge, top edges level; on the other side if there's no room, and moved up if it would hang off the bottom.
             Vector2 half = Rect.sizeDelta / 2f;
             Vector2 top = Rect.anchoredPosition + new Vector2(0f, half.y);

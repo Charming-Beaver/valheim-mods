@@ -82,6 +82,33 @@ namespace StorageMaster.Tests
                 $"Saved where it ended up ({Plugin.InventoryBadgeX.Value}, {Plugin.InventoryBadgeY.Value})");
         }
 
+        /// <summary>
+        /// Away from its panel (here over the crafting panel), the badge is drawn over the rest of the inventory screen,
+        /// so it can't be lost behind another panel. Back on its panel it goes under it again. The menu is always on top.
+        /// </summary>
+        [Test]
+        private static IEnumerator BadgeAwayFromItsPanelAndTheMenuAreNeverCovered()
+        {
+            yield return ShowInventory();
+            InventoryGui gui = InventoryGui.instance;
+            int screen = gui.GetComponentInParent<Canvas>().sortingOrder;
+            Assert.True(OwnLayerAbove(Inventory.Menu.gameObject, screen), "The menu is drawn over the inventory screen");
+            Assert.True(!OwnLayerAbove(Inventory.gameObject, screen), "At its usual place the badge is drawn in its place, under the panel");
+
+            // Onto the crafting panel.
+            Rect crafting = InRoot(gui.m_crafting), badge = InRoot(Inventory.Rect);
+            Inventory.MoveTo(Inventory.Rect.anchoredPosition - Inventory.Home + (crafting.center - badge.center) / Inventory.Rect.lossyScale.x * UIKit.CanvasRoot.lossyScale.x);
+            Assert.True(InRoot(Inventory.Rect).Overlaps(crafting), $"The badge is over the crafting panel ({InRoot(Inventory.Rect)}, {crafting})");
+            Assert.True(OwnLayerAbove(Inventory.gameObject, screen), "Over the crafting panel the badge is drawn over it");
+            Assert.True(Inventory.GetComponent<GraphicRaycaster>() != null, "and can be clicked there");
+
+            Inventory.MoveTo(Vector2.zero);
+            Assert.True(!OwnLayerAbove(Inventory.gameObject, screen), "Back at its usual place it's drawn under the panel again");
+        }
+
+        private static bool OwnLayerAbove(GameObject go, int sortingOrder) =>
+            go.TryGetComponent(out Canvas canvas) && canvas.overrideSorting && canvas.sortingOrder > sortingOrder;
+
         /// <summary>By default, nothing covers the game's armor and weight boxes, the chest panel, or each other.</summary>
         [Test]
         private static IEnumerator BadgesAndMenusCoverNothingAtFirst()
