@@ -19,7 +19,7 @@ Use these sections, skipping any that don't apply:
 - **Reporter's mod setup**: the reporter's known installed mods, noting that the full list is unknown
 - **Next steps** / **Things to check**: checklist, when useful
 - **Related issues**: `#N` plus why they're related
-- **Source**: who reported it and where, with a link
+- **Source**: who reported it and where, linking the exact comment or post rather than the whole thread: a Reddit comment's permalink (`…/comments/<thread>/<slug>/<comment id>/`), or a Nexus post (`…/mods/<id>?tab=posts&jump_to_comment=<post id>`)
 
 ### Related issues
 Link related issues both ways:
@@ -35,7 +35,7 @@ Link related issues both ways:
 
 ## Building
 - Needs the .NET SDK and Valheim with BepInEx installed. The build references the game's DLLs and copies the mod into `BepInEx/plugins/<Mod>/`.
-- `Directory.Build.props` defaults `ValheimDir` to `D:\SteamLibrary\steamapps\common\Valheim`. Elsewhere pass `-p:ValheimDir="<path>"`. `tests/run-tests.ps1` finds Valheim through Steam by itself.
+- `Directory.Build.props` defaults `ValheimDir` to `D:\SteamLibrary\steamapps\common\Valheim`. Elsewhere pass `-p:ValheimDir="<path>"`. `tests/run-tests.ps1` and `package.ps1` (and so `release.ps1`) find Valheim through Steam by themselves.
 - The mods use Krafs.Publicizer, so private game members (and, in the tests, the mod's own private members) can be used directly, without reflection.
 
 ## Reading the game's code
