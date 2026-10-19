@@ -784,8 +784,7 @@ namespace StorageMaster.UI
                         if (item.m_shared.m_name != name) continue;
                         if (src == mine && !QuickStack.CanMove(player, item)) continue;
                         if (!dest.CanAddItem(item, 1)) break;
-                        if (dest.AddItem(item)) src.RemoveItem(item);
-                        else src.Changed();
+                        MoveInto(dest, src, item);
                     }
                 }
                 dest.Changed();
@@ -797,6 +796,38 @@ namespace StorageMaster.UI
             }
             if (moved > 0) InventoryGui.instance.m_moveItemEffects.Create(player.transform.position, Quaternion.identity);
             return moved;
+        }
+
+        /// <summary>
+        /// Moves as much of a stack as fits. The game's AddItem also handles a stack that only partly fits (room on
+        /// partial stacks, but no empty slot), but then logs "Trying to add item to occupied slot", so it only gets what fits.
+        /// </summary>
+        private static void MoveInto(Inventory dest, Inventory src, ItemDrop.ItemData item)
+        {
+            int room = int.MaxValue;
+            if (!dest.HaveEmptySlot())
+            {
+                room = 0;
+                foreach (ItemDrop.ItemData other in dest.GetAllItems())
+                {
+                    if (other.m_shared.m_name == item.m_shared.m_name && other.m_quality == item.m_quality && other.m_worldLevel == item.m_worldLevel)
+                    {
+                        room += Mathf.Max(0, other.m_shared.m_maxStackSize - other.m_stack);
+                    }
+                }
+            }
+            if (item.m_stack <= room)
+            {
+                if (dest.AddItem(item)) src.RemoveItem(item);
+                else src.Changed();
+                return;
+            }
+            // Only partial stacks have room: top them up with part of the stack, the rest stays where it is.
+            ItemDrop.ItemData part = item.Clone();
+            part.m_stack = room;
+            dest.AddItem(part);
+            item.m_stack -= room;
+            src.Changed();
         }
 
         private static bool AnyLeft(string name, List<Inventory> sources, Inventory mine, bool includeMe, Player player)

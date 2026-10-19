@@ -234,7 +234,22 @@ namespace StorageMaster.Tests
                 var before = kinds.ToDictionary(k => k, k => chests.Sum(c => Count(c.GetInventory(), k)));
 
                 yield return OpenAndWait();
-                StorageWindow.TidyUp();
+                // The game warns when it's handed a stack that only partly fits; moving items must not cause that.
+                var warnings = new List<string>();
+                void Listen(string message, string stack, LogType type)
+                {
+                    if (message.Contains("occupied slot")) warnings.Add(message);
+                }
+                Application.logMessageReceived += Listen;
+                try
+                {
+                    StorageWindow.TidyUp();
+                }
+                finally
+                {
+                    Application.logMessageReceived -= Listen;
+                }
+                Assert.True(warnings.Count == 0, $"Seed {seed}: {warnings.Count} warnings, e.g. \"{warnings.FirstOrDefault()}\"");
 
                 foreach (string kind in kinds)
                 {

@@ -4,6 +4,7 @@
 
 - Tidy up brings items together much more completely when chests are nearly full: it merges partial stacks first and keeps going until nothing more can be moved
 - The Storage window says how many chests are over the Max chests limit, and Tidy up, Sort all, Gather here and Quick stack say when chests were left out because they were still opening or in use by someone else
+- Tidy up and Gather here no longer fill the log with "Trying to add item to occupied slot" warnings when chests are nearly full
 
 ## 1.0.1
 
