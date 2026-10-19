@@ -94,6 +94,7 @@ The **Info** button in the inventory menu explains every feature. It also lets y
 | Open the Storage window | `Shift + F1` |
 | Sort inventory | `Shift + F4` |
 | Quick stack | `Shift + F3` |
+| Info window | `Shift + F6` |
 | Auto-sort on / off | not set |
 | Info window | not set |
 | Lock / unlock a slot | `Alt + click` |
