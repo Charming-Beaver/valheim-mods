@@ -12,7 +12,7 @@ namespace StorageMaster
     {
         public const string Guid = "charmingbeaver.valheim.storagemaster";
         public const string Name = "Storage Master";
-        public const string Version = "1.0.0";
+        public const string Version = "1.0.1";
 
         public static ConfigEntry<Sorter.Mode> SortMode;
         public static ConfigEntry<bool> AutoSort;

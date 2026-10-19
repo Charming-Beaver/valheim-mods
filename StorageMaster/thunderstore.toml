@@ -7,7 +7,7 @@ schemaVersion = "0.0.1"
 [package]
 namespace = "CharmingBeaver"
 name = "StorageMaster"
-versionNumber = "1.0.0"
+versionNumber = "1.0.1"
 description = "See manifest.json in the package."
 websiteUrl = "https://github.com/Charming-Beaver/valheim-mods"
 containsNsfwContent = false
