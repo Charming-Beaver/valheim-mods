@@ -49,7 +49,7 @@ namespace StorageMaster.UI
                     "<color=#ffa13c>Esc</color> puts a carried item back, or closes the window.");
             Para(c, "<color=#ffa13c>Right-click</color> an item to choose it: every slot with it lights up and you see how many you have and where. " +
                     "Then <color=#ffa13c>Gather here</color> on a chest pulls all of it into that chest; what doesn't fit goes into the next chests.");
-            Para(c, "<color=#ffa13c>Find item</color> highlights matches in every chest.  <color=#ffa13c>Tidy up</color> brings each item that's spread over several chests " +
+            Para(c, "<color=#ffa13c>Find item</color> (or <color=#ffa13c>F</color>, as in the build menu) highlights matches in every chest.  <color=#ffa13c>Tidy up</color> brings each item that's spread over several chests " +
                     "into the chest holding most of it, then sorts all chests.  Click a chest's title to <color=#ffa13c>name it</color>, " +
                     "here or in the normal chest window (E); the name shows when you look at the chest in the world.  " +
                     "<color=#ffa13c>Settings</color> sets how far away and how many chests are opened (up to 20 m and about 30 chests is recommended).");

@@ -216,6 +216,28 @@ namespace StorageMaster.Tests
             yield return Screenshot("find-item");
         }
 
+        /// <summary>
+        /// Only Find item shows the F key hint, and F (which can't be pressed in a test, so its method is called) puts
+        /// the cursor into it. The Options window's X/Y fields have no hint (#41).
+        /// </summary>
+        [Test]
+        private static IEnumerator OnlyFindItemShowsTheFKeyAndFFocusesIt()
+        {
+            yield return OpenAndWait();
+            Assert.True(StorageWindow._search.GetComponentInChildren<UIInputHint>(true) != null, "Find item shows the F key");
+
+            StorageWindow.FocusSearch();
+            yield return Frames(2);
+            Assert.True(StorageWindow._search.isFocused, "Find item has the cursor");
+            Assert.Equal("", StorageWindow._search.text, "Find item's text");
+
+            OptionsWindow.Open();
+            yield return Frames(2);
+            var withHint = OptionsWindow._window.Root.GetComponentsInChildren<TMPro.TMP_InputField>(true)
+                .Where(f => f.GetComponentInChildren<UIInputHint>(true) != null).Select(f => f.transform.parent.name).ToList();
+            Assert.True(withHint.Count == 0, $"Fields in Options with a key hint: {string.Join(", ", withHint)}");
+        }
+
         /// <summary>The window's and the inventory buttons' own tooltips have a tooltip to show (#21).</summary>
         [Test]
         private static IEnumerator ButtonTooltipsCanShow()
