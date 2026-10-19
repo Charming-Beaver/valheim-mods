@@ -212,9 +212,13 @@ namespace StorageMaster.UI
             TextAlignmentOptions align = TextAlignmentOptions.MidlineLeft, bool norse = false, string name = "text")
         {
             RectTransform rt = Rect(parent, name);
+            // Added while inactive, so the text has its font before it initializes. An active one starts up right away,
+            // finds no font, and makes TextMeshPro look for its default font (not in the game) and log a warning.
+            rt.gameObject.SetActive(false);
             TextMeshProUGUI t = rt.gameObject.AddComponent<TextMeshProUGUI>();
             t.font = norse ? Norse : Font;
             if (!norse && FontMaterial != null) t.fontSharedMaterial = FontMaterial;
+            rt.gameObject.SetActive(true);
             t.fontSize = size;
             t.color = color ?? Parchment;
             t.alignment = align;
