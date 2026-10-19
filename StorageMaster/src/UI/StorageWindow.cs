@@ -122,7 +122,8 @@ namespace StorageMaster.UI
         {
             ReleaseAll();
             List<Container> chests = ChestAccess.FindNearby(Plugin.StorageRange.Value);
-            if (chests.Count > Plugin.StorageMaxChests.Value) chests.RemoveRange(Plugin.StorageMaxChests.Value, chests.Count - Plugin.StorageMaxChests.Value);
+            int overLimit = Mathf.Max(0, chests.Count - Plugin.StorageMaxChests.Value);
+            if (overLimit > 0) chests.RemoveRange(Plugin.StorageMaxChests.Value, overLimit);
             foreach (Container chest in chests)
             {
                 Card card = BuildCard(chest);
@@ -132,6 +133,8 @@ namespace StorageMaster.UI
             _summaryBase = chests.Count == 0
                 ? $"No chests within {Plugin.StorageRange.Value:0} m that you can open."
                 : $"{chests.Count} chest{(chests.Count == 1 ? "" : "s")} within {Plugin.StorageRange.Value:0} m";
+            // Only the nearest ones are opened; say so, or the rest silently don't take part in tidying up and gathering.
+            if (overLimit > 0) _summaryBase += $"  <color=#ffa13c>{overLimit} more over the Max chests limit (Settings)</color>";
             LayoutCards();
         }
 
@@ -736,7 +739,23 @@ namespace StorageMaster.UI
             Plugin.Show(moved == 0
                 ? $"Nothing to gather: all {name} already in place"
                 : $"Gathered {moved} {name}" + (chestsUsed > 1 ? $"\n<size=70%>{intoTarget} into this chest, the rest into {chestsUsed - 1} more</size>" : "") +
-                  (remaining > 0 && chestsUsed <= 1 ? $"\n<size=70%>{remaining} left elsewhere</size>" : ""));
+                  (remaining > 0 && chestsUsed <= 1 ? $"\n<size=70%>{remaining} left elsewhere</size>" : "") + LeftOut());
+        }
+
+        /// <summary>
+        /// A note on chests that couldn't take part (still opening, or open for someone else), for the summary of
+        /// Gather here, Tidy up, Sort all and Quick stack. Empty when all chests in the window took part.
+        /// </summary>
+        private static string LeftOut()
+        {
+            int opening = _cards.Count(c => !c.Claimed && !c.Denied);
+            int inUse = _cards.Count(c => c.Denied);
+            if (opening == 0 && inUse == 0) return "";
+            var parts = new List<string>();
+            if (opening > 0) parts.Add($"{opening} still opening");
+            if (inUse > 0) parts.Add($"{inUse} in use by someone else");
+            int total = opening + inUse;
+            return $"\n<size=70%><color=#ffa13c>{total} chest{(total == 1 ? " was" : "s were")} left out: {string.Join(", ", parts)}</color></size>";
         }
 
         /// <summary>
@@ -808,37 +827,48 @@ namespace StorageMaster.UI
                 SortAll();
                 return;
             }
+            // Merging partial stacks first frees slots in full chests, so more can be brought together.
+            foreach (Card c in ready) Sorter.SortContainer(c.Chest, silent: true);
             var names = new HashSet<string>(ready.SelectMany(c => c.Inv.GetAllItems().Select(i => i.m_shared.m_name)));
-            int moved = 0, kinds = 0;
-            foreach (string name in names)
+            int moved = 0;
+            var kinds = new HashSet<string>();
+            // Gathering one kind can make room for another that was already done (its chest was full then), so repeat
+            // until nothing moves. Items only ever move towards the chest holding the most of them, so this settles quickly.
+            for (int pass = 0; pass < 10; pass++)
             {
-                var holders = ready.Where(c => c.Inv.CountItems(name) > 0).OrderByDescending(c => c.Inv.CountItems(name)).ToList();
-                if (holders.Count < 2) continue;
-                // Overflow goes first to chests that already hold some, then to any other chest.
-                var order = holders.Concat(ready.Where(c => !holders.Contains(c))).ToList();
-                int m = Gather(name, order, false, out _, out _);
-                if (m > 0)
+                int movedThisPass = 0;
+                foreach (string name in names)
                 {
-                    moved += m;
-                    kinds++;
+                    var holders = ready.Where(c => c.Inv.CountItems(name) > 0).OrderByDescending(c => c.Inv.CountItems(name)).ToList();
+                    if (holders.Count < 2) continue;
+                    // Overflow goes first to chests that already hold some, then to any other chest.
+                    var order = holders.Concat(ready.Where(c => !holders.Contains(c))).ToList();
+                    int m = Gather(name, order, false, out _, out _);
+                    if (m > 0)
+                    {
+                        movedThisPass += m;
+                        kinds.Add(name);
+                    }
                 }
+                moved += movedThisPass;
+                if (movedThisPass == 0) break;
             }
             foreach (Card c in ready) Sorter.SortContainer(c.Chest, silent: true);
-            Plugin.Show(moved > 0 ? $"Tidied up: {kinds} kind{(kinds == 1 ? "" : "s")} of items brought together, all chests sorted" : "All chests sorted (nothing was spread out)");
+            Plugin.Show((moved > 0 ? $"Tidied up: {kinds.Count} kind{(kinds.Count == 1 ? "" : "s")} of items brought together, all chests sorted" : "All chests sorted (nothing was spread out)") + LeftOut());
         }
 
         private static void SortAll()
         {
             List<Card> ready = Usable;
             foreach (Card c in ready) Sorter.SortContainer(c.Chest, silent: true);
-            Plugin.Show($"Sorted {ready.Count} chest{(ready.Count == 1 ? "" : "s")} by {Sorter.ModeLabel}");
+            Plugin.Show($"Sorted {ready.Count} chest{(ready.Count == 1 ? "" : "s")} by {Sorter.ModeLabel}" + LeftOut());
         }
 
         private static void QuickStackHere()
         {
             int total = 0;
             foreach (Card c in Usable) total += QuickStack.StackInto(c.Inv);
-            Plugin.Show(total > 0 ? $"Quick stacked {total} item{(total == 1 ? "" : "s")}" : "Nothing of yours matches these chests");
+            Plugin.Show((total > 0 ? $"Quick stacked {total} item{(total == 1 ? "" : "s")}" : "Nothing of yours matches these chests") + LeftOut());
         }
 
         // ------------------------------------------------------------------ highlighting
