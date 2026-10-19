@@ -971,6 +971,8 @@ namespace StorageMaster.UI
                 {
                     if (!match) continue;
                     RectTransform rt = UIKit.Rect(element.transform, HighlightName).Fill();
+                    // First child: drawn over the slot's background but under the item, so the item keeps its colors.
+                    rt.SetSiblingIndex(0);
                     Image img = rt.gameObject.AddComponent<Image>();
                     img.color = new Color(1f, 0.631f, 0.235f, HighlightAlpha);
                     img.raycastTarget = false;

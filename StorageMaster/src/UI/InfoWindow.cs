@@ -77,7 +77,7 @@ namespace StorageMaster.UI
             _root = UIKit.Rect(UIKit.CanvasRoot, "StorageMasterInfo").Fill().gameObject;
             _root.AddComponent<Image>().color = new Color(0, 0, 0, 0.35f);
 
-            RectTransform window = UIKit.Panel(_root.transform, "window").rectTransform;
+            RectTransform window = UIKit.DarkPanel(_root.transform, "window").rectTransform;
             window.anchorMin = window.anchorMax = new Vector2(0.5f, 0.5f);
             window.pivot = new Vector2(0.5f, 0.5f);
             window.sizeDelta = new Vector2(W, H);

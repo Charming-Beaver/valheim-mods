@@ -191,6 +191,31 @@ namespace StorageMaster.Tests
             UITooltip.HideTooltip();
         }
 
+        /// <summary>
+        /// Find item fades everything that doesn't match. Matches keep their full color: the orange highlight lights up
+        /// the slot behind the item, not the item itself.
+        /// </summary>
+        [Test]
+        private static IEnumerator FindItemLightsUpMatchesWithoutTintingThem()
+        {
+            Container chest = SpawnChest();
+            Put(chest.GetInventory(), "Wood", 10, 0, 0);
+            Put(chest.GetInventory(), "Stone", 10, 1, 0);
+            yield return OpenAndWait();
+            StorageWindow._search.text = "wood";
+            yield return Frames(3);
+
+            InventoryGrid grid = StorageWindow._cards.Single(c => c.Chest == chest).Grid;
+            InventoryElement wood = grid.m_elements.Single(e => e.Position == new Vector2i(0, 0));
+            InventoryElement stone = grid.m_elements.Single(e => e.Position == new Vector2i(1, 0));
+            Transform highlight = wood.transform.Find(StorageWindow.HighlightName);
+            Assert.True(highlight != null && highlight.gameObject.activeSelf, "Wood's slot is highlighted");
+            Assert.True(highlight.GetSiblingIndex() < wood.m_icon.transform.GetSiblingIndex(), "The highlight is under the item's icon");
+            Assert.Equal(1f, wood.m_icon.color.a, "Wood's icon opacity");
+            Assert.True(stone.m_icon.color.a < 0.5f, $"Stone is faded (opacity {stone.m_icon.color.a})");
+            yield return Screenshot("find-item");
+        }
+
         /// <summary>The window's and the inventory buttons' own tooltips have a tooltip to show (#21).</summary>
         [Test]
         private static IEnumerator ButtonTooltipsCanShow()
