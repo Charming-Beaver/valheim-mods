@@ -18,6 +18,8 @@ namespace StorageMaster.UI
         public Vector2 Home;
         public ConfigEntry<bool> MenuOpen;
         public ConfigEntry<int> X, Y;
+        /// <summary>The game's boxes on the same panel (armor, weight), which are drawn over the badge.</summary>
+        public Transform[] Boxes;
 
         private bool _moving;
         private Vector2 _grab, _live;
@@ -28,7 +30,7 @@ namespace StorageMaster.UI
 
         /// <summary>Puts a badge just above <paramref name="below"/> (the panel's weight box), with the same look and size.</summary>
         public static Badge Create(RectTransform panel, RectTransform below, string name, RectTransform menu,
-            ConfigEntry<bool> menuOpen, ConfigEntry<int> x, ConfigEntry<int> y)
+            ConfigEntry<bool> menuOpen, ConfigEntry<int> x, ConfigEntry<int> y, params Transform[] boxes)
         {
             // A copy of the weight box (its frame and wooden face, with their materials and colors), so it looks the same,
             // also when a UI mod restyles that box. Its icon, text and any scripts are removed.
@@ -48,8 +50,6 @@ namespace StorageMaster.UI
             }
             OnlyLooks(go);
             if (face == null) face = go.GetComponent<Image>() ?? go.AddComponent<Image>();
-            // Right after the weight box, so the panel's background covers its edge like it covers the game's boxes.
-            rt.SetSiblingIndex(below.GetSiblingIndex() + 1);
 
             // Three bars: the usual sign for a menu.
             for (int i = -1; i <= 1; i++)
@@ -69,6 +69,9 @@ namespace StorageMaster.UI
             badge.colors = colors;
             badge.Menu = menu;
             badge.Home = below.anchoredPosition + new Vector2(0f, below.sizeDelta.y + 12f);
+            badge.Boxes = new Transform[boxes.Length + 1];
+            badge.Boxes[0] = below;
+            boxes.CopyTo(badge.Boxes, 1);
             badge.MenuOpen = menuOpen;
             badge.X = x;
             badge.Y = y;
@@ -114,6 +117,7 @@ namespace StorageMaster.UI
         /// <summary>Puts the badge where it was saved (kept on screen) and the menu next to it, if it's open.</summary>
         public void Apply()
         {
+            KeepUnder();
             Rect.anchoredPosition = Home + (_moving ? _live : new Vector2(X.Value, Y.Value));
             Rect.anchoredPosition += ShiftOnScreen(Rect);
             if (GetComponent<UITooltip>() is UITooltip tip)
@@ -138,6 +142,20 @@ namespace StorageMaster.UI
                 shift = ShiftOnScreen(Menu);
             }
             Menu.anchoredPosition += shift;
+        }
+
+        /// <summary>
+        /// Drawn before the game's boxes and ExtraSlots' panel (which it adds to the inventory panel later on), and so
+        /// before the panel's background: moved over any of them, the badge goes under it, like the game's boxes do.
+        /// </summary>
+        private void KeepUnder()
+        {
+            int first = int.MaxValue;
+            foreach (Transform sibling in Parent)
+            {
+                if (sibling.name.StartsWith("ExtraSlots") || System.Array.IndexOf(Boxes, sibling) >= 0) first = Mathf.Min(first, sibling.GetSiblingIndex());
+            }
+            if (first < transform.GetSiblingIndex()) transform.SetSiblingIndex(first);
         }
 
         /// <summary>How far (in its parent's units) <paramref name="rt"/> has to move to be fully on screen.</summary>

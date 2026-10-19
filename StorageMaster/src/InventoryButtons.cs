@@ -42,7 +42,7 @@ namespace StorageMaster
                 "Opens every chest nearby in one window, to move, find, gather and tidy up items.");
             _info = Make(menu, "Info", InfoWindow.Open, 5, "How Storage Master works, its hotkeys and settings.");
             _badge = Badge.Create(gui.m_player, BoxOf(gui.m_player, gui.m_weight), "StorageMaster_Badge", menu,
-                Plugin.InventoryMenuOpen, Plugin.InventoryBadgeX, Plugin.InventoryBadgeY);
+                Plugin.InventoryMenuOpen, Plugin.InventoryBadgeX, Plugin.InventoryBadgeY, gui.m_armor != null ? BoxOf(gui.m_player, gui.m_armor) : null);
 
             if (gui.m_container != null && gui.m_containerWeight != null)
             {
@@ -82,7 +82,7 @@ namespace StorageMaster
 
         private static RectTransform Menu(string name, int buttons)
         {
-            RectTransform menu = UIKit.Panel(UIKit.CanvasRoot, name).rectTransform;
+            RectTransform menu = UIKit.DarkPanel(UIKit.CanvasRoot, name).rectTransform;
             menu.sizeDelta = new Vector2(ButtonW + 2 * Pad, buttons * ButtonH + (buttons - 1) * Gap + 2 * Pad);
             return menu;
         }

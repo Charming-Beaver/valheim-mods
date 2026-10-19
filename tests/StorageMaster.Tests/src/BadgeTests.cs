@@ -114,7 +114,7 @@ namespace StorageMaster.Tests
 
         /// <summary>
         /// The badges look like the game's weight boxes and, like them, are drawn before the panel's background,
-        /// which covers their inner edge.
+        /// which covers their inner edge. They're also drawn under the game's boxes and ExtraSlots' panel.
         /// </summary>
         [Test]
         private static IEnumerator BadgesLookAndSitLikeTheWeightBoxes()
@@ -130,8 +130,12 @@ namespace StorageMaster.Tests
 
             foreach (var (badge, weight) in new[] { (Inventory, gui.m_weight.transform.parent), (Chest, gui.m_containerWeight.transform.parent) })
             {
-                Transform panel = weight.parent;
-                Assert.Equal(weight.GetSiblingIndex() + 1, badge.transform.GetSiblingIndex(), $"{badge.name} drawn right after {Path(weight)}");
+                // Drawn before the panel's background, the game's boxes and ExtraSlots' panel, so moved over them it goes under them.
+                foreach (Transform sibling in weight.parent)
+                {
+                    bool covers = sibling == weight || sibling == gui.m_armor.transform.parent || sibling.name == "Bkg" || sibling.name.StartsWith("ExtraSlots");
+                    if (covers) Assert.True(badge.transform.GetSiblingIndex() < sibling.GetSiblingIndex(), $"{badge.name} drawn before {Path(sibling)}");
+                }
                 foreach (string part in new[] { "", "bkg" })
                 {
                     Image theirs = part == "" ? weight.GetComponent<Image>() : weight.Find(part).GetComponent<Image>();

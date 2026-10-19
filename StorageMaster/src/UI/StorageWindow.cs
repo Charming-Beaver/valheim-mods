@@ -263,7 +263,7 @@ namespace StorageMaster.UI
             _root = UIKit.Rect(UIKit.CanvasRoot, "StorageMasterStorage").Fill().gameObject;
             _root.AddComponent<Image>().color = new Color(0, 0, 0, 0.35f);
 
-            RectTransform window = UIKit.Panel(_root.transform, "window").rectTransform;
+            RectTransform window = UIKit.DarkPanel(_root.transform, "window").rectTransform;
             window.anchorMin = window.anchorMax = new Vector2(0.5f, 0.5f);
             window.pivot = new Vector2(0.5f, 0.5f);
             window.sizeDelta = new Vector2(W, H);
@@ -345,7 +345,7 @@ namespace StorageMaster.UI
         private static void BuildSettings(RectTransform window)
         {
             const float sw = 480f, sh = 330f;
-            _settings = UIKit.Panel(window, "settings").rectTransform.TopLeft(W - 24 - sw, 64, sw, sh);
+            _settings = UIKit.DarkPanel(window, "settings").rectTransform.TopLeft(W - 24 - sw, 64, sw, sh);
             UIKit.Text(_settings, "Settings", 30, UIKit.Orange, TextAlignmentOptions.Center, true).rectTransform.TopLeft(0, 14, sw, 40);
 
             _rangeValue = SettingRow(_settings, "Range", 70, d =>

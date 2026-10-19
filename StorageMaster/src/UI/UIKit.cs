@@ -164,6 +164,26 @@ namespace StorageMaster.UI
             return img;
         }
 
+        /// <summary>
+        /// A panel with the inventory's own dark background (sprite, material and color copied from it), or the
+        /// lighter wooden panel if that isn't there.
+        /// </summary>
+        public static Image DarkPanel(Transform parent, string name = "panel")
+        {
+            Image img = Panel(parent, name);
+            InventoryGui gui = InventoryGui.instance;
+            Transform bkg = gui != null && gui.m_player != null ? gui.m_player.Find("Bkg") : null;
+            if (bkg != null && bkg.TryGetComponent(out Image inventory) && inventory.sprite != null)
+            {
+                img.sprite = inventory.sprite;
+                img.type = inventory.type;
+                img.material = inventory.material;
+                img.color = inventory.color;
+                img.pixelsPerUnitMultiplier = inventory.pixelsPerUnitMultiplier;
+            }
+            return img;
+        }
+
         /// <summary>The darker recessed background used inside wooden panels.</summary>
         public static Image Inset(Transform parent, string name = "inset", float alpha = 0.55f)
         {
