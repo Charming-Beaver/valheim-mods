@@ -93,11 +93,11 @@ namespace StorageMaster.UI
             ((RectTransform)c.parent.parent).Fill(4);
 
             Section(c, "Sorting");
-            Para(c, "<color=#ffa13c>Sort</color> (next to your inventory) tidies everything below the hotbar. The hotbar row is never moved. " +
+            Para(c, "<color=#ffa13c>Sort</color> (in the menu next to your inventory) tidies everything below the hotbar. The hotbar row is never moved. " +
                     "Partial stacks of the same item are merged first, so three stacks of 30 wood become one of 90.");
             Para(c, "<color=#ffa13c>By: ...</color> chooses the order: Name A-Z, Name Z-A, Type (weapons, ammo, armor, tools, food, materials, trophies), " +
                     "Quality (best first), Weight (heaviest first) or Amount (biggest stacks first).");
-            Para(c, "<color=#ffa13c>Sort chest</color> appears next to an open chest and sorts it the same way. " +
+            Para(c, "<color=#ffa13c>Sort chest</color> is in the menu next to an open chest and sorts it the same way. " +
                     "<color=#ffa13c>Auto-sort</color> sorts your inventory every time you pick something up.");
 
             Section(c, "Locked slots");
@@ -139,6 +139,15 @@ namespace StorageMaster.UI
                 d => Plugin.StorageRange.Value = Mathf.Clamp(Plugin.StorageRange.Value + d * 5f, 5f, 50f));
             NumberRow(c, "Most chests in Storage", "The nearest chests are shown first.", () => Plugin.StorageMaxChests.Value.ToString(),
                 d => Plugin.StorageMaxChests.Value = Mathf.Clamp(Plugin.StorageMaxChests.Value + d * 4, 4, 60));
+
+            Section(c, "Menu buttons");
+            Para(c, "The buttons are in two menus, one next to your inventory and one next to an open chest. " +
+                    "Click the box with three bars (above the weight) to open or close a menu; it stays the way you leave it. " +
+                    "Hold the drag key and drag the box to move it, for example when it covers another mod's window.");
+            ChoiceRow(c, "Drag key", "Hold it to move a menu button with the mouse.", () => Plugin.DragKey.Value.ToString(),
+                () => Plugin.DragKey.Value = (Plugin.DragKeys)(((int)Plugin.DragKey.Value + 1) % 3));
+            PositionRow(c, "Inventory menu button", "How far it's moved: right (X) and up (Y).", Plugin.InventoryBadgeX, Plugin.InventoryBadgeY);
+            PositionRow(c, "Chest menu button", "How far it's moved: right (X) and up (Y).", Plugin.ChestBadgeX, Plugin.ChestBadgeY);
 
             _footer = UIKit.Text(window, "", 16, UIKit.Grey, TextAlignmentOptions.Center).Wrap();
             RectTransform frt = _footer.rectTransform;
@@ -203,6 +212,46 @@ namespace StorageMaster.UI
             v.Size(80, 36);
             UIKit.Button(h.transform, "+", () => { change(+1); Refresh(); }, 40, 36);
             _refreshers.Add(() => v.text = value());
+        }
+
+        private static void ChoiceRow(Transform parent, string title, string description, Func<string> value, Action next)
+        {
+            HorizontalLayoutGroup h = UIKit.HRow(parent, "set_" + title, 8);
+            h.padding = new RectOffset(6, 6, 2, 2);
+            h.Size(-1, 50);
+            UIKit.Spacer(h.transform, 30, -1, 0);
+            Labels(h.transform, title, description);
+            Button b = UIKit.Button(h.transform, "", () => { next(); Refresh(); }, 176, 36);
+            _refreshers.Add(() => b.SetLabel(value()));
+        }
+
+        /// <summary>X and Y of a menu button, kept in step with dragging it, and a button to put it back.</summary>
+        private static void PositionRow(Transform parent, string title, string description, ConfigEntry<int> x, ConfigEntry<int> y)
+        {
+            HorizontalLayoutGroup h = UIKit.HRow(parent, "set_" + title, 8);
+            h.padding = new RectOffset(6, 6, 2, 2);
+            h.Size(-1, 50);
+            UIKit.Spacer(h.transform, 30, -1, 0);
+            Labels(h.transform, title, description);
+            foreach (ConfigEntry<int> entry in new[] { x, y })
+            {
+                UIKit.Text(h.transform, entry == x ? "X" : "Y", 19, UIKit.Orange, TextAlignmentOptions.Center).Size(16, 36);
+                TMP_InputField field = UIKit.InputField(h.transform, "0", 72, 36);
+                field.contentType = TMP_InputField.ContentType.IntegerNumber;
+                field.onEndEdit.AddListener(text =>
+                {
+                    if (int.TryParse(text, out int value)) entry.Value = value;
+                    InventoryButtons.ApplyBadges();
+                    Refresh();
+                });
+                _refreshers.Add(() => { if (!field.isFocused) field.SetTextWithoutNotify(entry.Value.ToString()); });
+            }
+            UIKit.Button(h.transform, "Reset", () =>
+            {
+                x.Value = y.Value = 0;
+                InventoryButtons.ApplyBadges();
+                Refresh();
+            }, 80, 36);
         }
 
         private static void Labels(Transform parent, string title, string description)

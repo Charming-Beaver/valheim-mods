@@ -200,7 +200,12 @@ namespace StorageMaster.Tests
             InventoryGui.instance.Hide();
             yield return OpenAndWait();
 
-            var roots = new List<GameObject> { StorageWindow._root, StorageMaster.InventoryButtons._sort.transform.parent.gameObject };
+            var roots = new List<GameObject> { StorageWindow._root };
+            foreach (Badge badge in new[] { StorageMaster.InventoryButtons._badge, StorageMaster.InventoryButtons._chestBadge })
+            {
+                roots.Add(badge.gameObject);
+                roots.Add(badge.Menu.gameObject);
+            }
             var missing = roots.SelectMany(r => r.GetComponentsInChildren<UITooltip>(true))
                 .Where(t => t.GetComponent<InventoryElement>() == null && t.m_tooltipPrefab == null)
                 .Select(t => t.name).ToList();

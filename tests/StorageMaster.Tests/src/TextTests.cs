@@ -49,7 +49,7 @@ namespace StorageMaster.Tests
                      {
                          StorageMaster.InventoryButtons._sort, StorageMaster.InventoryButtons._mode, StorageMaster.InventoryButtons._quickStack,
                          StorageMaster.InventoryButtons._autoSort, StorageMaster.InventoryButtons._storage, StorageMaster.InventoryButtons._info,
-                         StorageMaster.InventoryButtons._sortChest,
+                         StorageMaster.InventoryButtons._sortChest, StorageMaster.InventoryButtons._chestMode,
                      })
             {
                 Assert.True(button != null, "Button created");
@@ -120,18 +120,16 @@ namespace StorageMaster.Tests
         /// <summary>Throws away the windows, buttons and the fonts and templates they're built from, so they're built again.</summary>
         private static IEnumerator RebuildWindows()
         {
-            foreach (var button in new[]
-                     {
-                         StorageMaster.InventoryButtons._sort, StorageMaster.InventoryButtons._mode, StorageMaster.InventoryButtons._quickStack,
-                         StorageMaster.InventoryButtons._autoSort, StorageMaster.InventoryButtons._storage, StorageMaster.InventoryButtons._info,
-                         StorageMaster.InventoryButtons._sortChest,
-                     })
+            foreach (Badge badge in new[] { StorageMaster.InventoryButtons._badge, StorageMaster.InventoryButtons._chestBadge })
             {
-                if (button != null) Object.Destroy(button.gameObject);
+                if (badge == null) continue;
+                Object.Destroy(badge.Menu.gameObject);
+                Object.Destroy(badge.gameObject);
             }
+            StorageMaster.InventoryButtons._badge = StorageMaster.InventoryButtons._chestBadge = null;
             StorageMaster.InventoryButtons._sort = StorageMaster.InventoryButtons._mode = StorageMaster.InventoryButtons._quickStack =
                 StorageMaster.InventoryButtons._autoSort = StorageMaster.InventoryButtons._storage = StorageMaster.InventoryButtons._info =
-                    StorageMaster.InventoryButtons._sortChest = null;
+                    StorageMaster.InventoryButtons._sortChest = StorageMaster.InventoryButtons._chestMode = null;
             StorageWindow.Close();
             InfoWindow.Close();
             if (StorageWindow._root != null) Object.Destroy(StorageWindow._root);

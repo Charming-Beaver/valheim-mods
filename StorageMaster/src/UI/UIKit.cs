@@ -289,6 +289,17 @@ namespace StorageMaster.UI
             return b;
         }
 
+        /// <summary>The game's button sounds on our own button (it must already have its Button).</summary>
+        public static void ButtonSound(GameObject go)
+        {
+            ButtonSfx template = _buttonTemplate != null ? _buttonTemplate.GetComponent<ButtonSfx>() : null;
+            if (template == null) return;
+            ButtonSfx sfx = go.AddComponent<ButtonSfx>();
+            sfx.m_sfxPrefab = template.m_sfxPrefab;
+            sfx.m_selectSfxPrefab = template.m_selectSfxPrefab;
+            sfx.m_enterSfxPrefab = template.m_enterSfxPrefab;
+        }
+
         public static void SetLabel(this Button b, string label)
         {
             TMP_Text t = b.GetComponentInChildren<TMP_Text>(true);
