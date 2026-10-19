@@ -1,16 +1,24 @@
 # Changelog
 
-## Unreleased
+## 1.2.0
 
-- Tidy up brings items together much more completely when chests are nearly full: it merges partial stacks first and keeps going until nothing more can be moved
-- The Storage window says how many chests are over the Max chests limit, and Tidy up, Sort all, Gather here and Quick stack say when chests were left out because they were still opening or in use by someone else
-- Tidy up and Gather here no longer fill the log with "Trying to add item to occupied slot" warnings when chests are nearly full
+### Added
 - Works with ExtraSlots: Sort, auto-sort, Quick stack and Gather here leave its equipment, food, ammo, misc and quick slots alone, and the Storage window shows only your regular inventory rows
+- New Options window (button in the inventory menu, Shift + F6) for hotkeys, settings and the menu buttons, with Reset to bring back a menu button moved out of reach
+- F jumps into Find item in the Storage window, as in the build menu
+- The Storage window says how many chests are over the Max chests limit, and Tidy up, Sort all, Gather here and Quick stack say when chests were left out because they were still opening or in use by someone else
+
+### Changed
 - The buttons next to the inventory and the chest are now in menus that open from a small box above the weight. Ctrl + drag the box to move it out of other mods' way (key and position can be set in Options); the menus remember whether they're open
-- New Options window (button in the inventory menu, Shift + F6) for hotkeys, settings and the menu buttons, with Reset to bring back a menu button moved out of reach. Info now explains the features and lists your hotkeys
+- Info now explains the features and lists your hotkeys; changing them and the settings moved to Options
 - The menus, the Storage window, Info and Options use the inventory's darker background
-- Find item in the Storage window lights up the slots of matching items without tinting the items themselves, so they keep their full color
-- F jumps into Find item in the Storage window, as in the build menu. The other text fields no longer show an F key that does nothing
+
+### Fixed
+- Tidy up brings items together much more completely when chests are nearly full: it merges partial stacks first and keeps going until nothing more can be moved
+- Tidy up and Gather here no longer fill the log with "Trying to add item to occupied slot" warnings when chests are nearly full
+- Find item lights up the slots of matching items without tinting the items themselves, so they keep their full color
+- Text fields other than Find item no longer show an F key that does nothing
+- The By and Auto-sort buttons update when their settings are changed in the config file or a config manager
 
 ## 1.0.1
 
