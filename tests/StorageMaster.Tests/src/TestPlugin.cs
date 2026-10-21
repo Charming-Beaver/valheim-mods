@@ -151,6 +151,24 @@ namespace StorageMaster.Tests
             TestKit.Mine.RemoveAll();
             TestKit.Put(TestKit.Mine, "Wood", 20, 0, 1);
             TestKit.Put(TestKit.Mine, "Stone", 15, 1, 1);
+
+            // With Adventure Backpacks: a backpack on your back, with items the chests hold.
+            if (AdventureBackpacksCompat.Active)
+            {
+                ItemDrop.ItemData backpackItem = TestKit.Put(TestKit.Mine, "BackpackMeadows", 1, 7, 3);
+                TestKit.Me.EquipItem(backpackItem);
+                yield return null;
+                Inventory backpack = AdventureBackpacksCompat.Backpack(TestKit.Me);
+                if (backpack != null)
+                {
+                    backpack.RemoveAll();
+                    string[] inBackpack = { "Resin", "Flint", "Raspberry" };
+                    for (int i = 0; i < inBackpack.Length && i < backpack.GetWidth() * backpack.GetHeight(); i++)
+                    {
+                        TestKit.Put(backpack, inBackpack[i], 10 + 5 * i, i % backpack.GetWidth(), i / backpack.GetWidth());
+                    }
+                }
+            }
         }
 
         private static IEnumerator Wrap(MethodInfo test)

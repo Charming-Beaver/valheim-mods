@@ -30,7 +30,7 @@ Opens every chest around you at once, next to your inventory, using the game's o
 [*]A [b]Sort[/b] button next to your inventory tidies everything [b]below the hotbar[/b]. Your hotbar row is never moved.
 [*]Partial stacks of the same item are merged first, so three stacks of 30 wood become one stack of 90.
 [*][b]By: …[/b] switches the order: Name A–Z, Name Z–A, Type (weapons, ammo, armor, tools, food, materials, trophies), Quality, Weight or Amount.
-[*][b]Sort chest[/b] appears next to any chest you open and sorts it the same way.
+[*][b]Sort chest[/b] appears next to any chest you open and sorts it the same way. With Adventure Backpacks, it sorts your open backpack too.
 [*][b]Auto-sort[/b] (optional) sorts your inventory every time you pick something up.
 [/list]
 
@@ -45,6 +45,7 @@ Opens every chest around you at once, next to your inventory, using the game's o
 [list]
 [*]One click (or a hotkey) puts your items into [b]nearby chests that already hold the same kind of item[/b].
 [*]Your hotbar, equipped gear and locked slots always stay with you.
+[*]With Adventure Backpacks, items in the backpack you're wearing go too. Turn that off in Options to quick stack the backpack on its own instead, from a Quick stack button next to the open backpack.
 [*]A short summary shows how many items went into how many chests.
 [/list]
 
@@ -112,6 +113,7 @@ All settings live in [b]BepInEx/config/charmingbeaver.valheim.storagemaster.cfg[
 [*][b]Sorting / AutoSort[/b] (false): sort on every pickup
 [*][b]QuickStack / Range[/b] (10): meters around you
 [*][b]QuickStack / SkipHotbar[/b] (true): keep the hotbar out of quick stack
+[*][b]QuickStack / IncludeBackpack[/b] (true): with Adventure Backpacks, quick stack from the backpack you're wearing too (off: the open backpack gets its own Quick stack button)
 [*][b]Storage / Range[/b] (15): meters around you
 [*][b]Storage / MaxChests[/b] (24): nearest chests first
 [*][b]Storage / ShowInventory[/b] (true): show your inventory in the Storage window
@@ -120,6 +122,7 @@ All settings live in [b]BepInEx/config/charmingbeaver.valheim.storagemaster.cfg[
 [line]
 
 [size=5][b]Compatibility[/b][/size]
+Works with [b]Adventure Backpacks[/b]: Quick stack takes items from the backpack you're wearing, and Sort chest sorts the open backpack.
 Other mods that change the inventory screen or chest handling (sorting, auto-storing, quick stacking) may clash with this one. If something behaves oddly, try without them first.
 
 [line]

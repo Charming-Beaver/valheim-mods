@@ -25,7 +25,7 @@ Everything looks and feels like Valheim's own UI, and the whole mod runs on your
   - **Quality**: best first
   - **Weight**: heaviest first
   - **Amount**: biggest stacks first
-- **Sort chest** is in the menu next to any chest you open and sorts it the same way.
+- **Sort chest** is in the menu next to any chest you open and sorts it the same way. With Adventure Backpacks, it sorts your open backpack too.
 - **Auto-sort** (optional) sorts your inventory every time you pick something up.
 
 ### Locked slots
@@ -36,6 +36,7 @@ Everything looks and feels like Valheim's own UI, and the whole mod runs on your
 ### Quick stack
 - One click (or a hotkey) puts your items into **nearby chests that already hold the same kind of item**.
 - Your hotbar, equipped gear and locked slots always stay with you.
+- With Adventure Backpacks, items in the backpack you're wearing go too. Turn that off in Options to quick stack the backpack on its own instead, from a Quick stack button next to the open backpack.
 - A short summary shows how many items went into how many chests.
 
 ### Storage window
@@ -136,12 +137,14 @@ All settings live in `BepInEx/config/charmingbeaver.valheim.storagemaster.cfg`. 
 | Sorting | AutoSort | false | Sort on every pickup |
 | QuickStack | Range | 10 | Meters around you |
 | QuickStack | SkipHotbar | true | Keep the hotbar out of quick stack |
+| QuickStack | IncludeBackpack | true | With Adventure Backpacks, quick stack from the backpack you're wearing too (off: the open backpack gets its own Quick stack button) |
 | Storage | Range | 15 | Meters around you |
 | Storage | MaxChests | 24 | Nearest chests first |
 | Storage | ShowInventory | true | Show your inventory in the Storage window |
 
 ## Compatibility
 
+- Works with **Adventure Backpacks**: Quick stack takes items from the backpack you're wearing, and Sort chest sorts the open backpack.
 - Made for keyboard and mouse. Controllers aren't supported in the mod's windows.
 - Other mods that change the inventory screen or chest handling (sorting, auto-storing, quick stacking) may clash with this one. If something behaves oddly, try without them first.
 

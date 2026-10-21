@@ -56,7 +56,7 @@ namespace StorageMaster.Tests
 
             foreach (var entry in new BepInEx.Configuration.ConfigEntryBase[]
                      {
-                         Plugin.SortMode, Plugin.AutoSort, Plugin.QuickStackRange, Plugin.QuickStackSkipsHotbar,
+                         Plugin.SortMode, Plugin.AutoSort, Plugin.QuickStackRange, Plugin.QuickStackSkipsHotbar, Plugin.QuickStackIncludesBackpack,
                          Plugin.StorageRange, Plugin.StorageMaxChests, Plugin.StorageShowInventory,
                          Plugin.DragKey, Plugin.InventoryMenuOpen, Plugin.InventoryBadgeX, Plugin.InventoryBadgeY,
                          Plugin.ChestMenuOpen, Plugin.ChestBadgeX, Plugin.ChestBadgeY,

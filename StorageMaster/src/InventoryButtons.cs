@@ -13,8 +13,12 @@ namespace StorageMaster
     {
         private const float ButtonW = 160f, ButtonH = 36f, Gap = 4f, Pad = 8f;
 
-        private static Button _sort, _mode, _quickStack, _autoSort, _storage, _info, _options, _sortChest, _chestMode;
+        private static Button _sort, _mode, _quickStack, _autoSort, _storage, _info, _options, _sortChest, _chestMode, _backpackQuickStack;
         private static Badge _badge, _chestBadge;
+        private static RectTransform _chestMenu;
+        // What the chest menu shows: a chest, the backpack, or the backpack with its own Quick stack.
+        private enum ChestMenuFor { Chest, Backpack, BackpackWithQuickStack }
+        private static ChestMenuFor _chestMenuFor;
 
         public static void Ensure()
         {
@@ -25,7 +29,12 @@ namespace StorageMaster
                 if (InventoryGui.IsVisible())
                 {
                     _badge.Apply();
-                    if (_chestBadge != null && _chestBadge.gameObject.activeInHierarchy) _chestBadge.Apply();
+                    if (_chestBadge != null && _chestBadge.gameObject.activeInHierarchy)
+                    {
+                        // First, so the menu is kept on screen at its new size.
+                        UpdateChestMenu(gui.m_currentContainer);
+                        _chestBadge.Apply();
+                    }
                 }
                 return;
             }
@@ -48,14 +57,35 @@ namespace StorageMaster
 
             if (gui.m_container != null && gui.m_containerWeight != null)
             {
-                RectTransform chestMenu = Menu("StorageMaster_ChestMenu", 2);
+                RectTransform chestMenu = _chestMenu = Menu("StorageMaster_ChestMenu", 2);
                 _sortChest = Make(chestMenu, "Sort chest", () => Sorter.SortContainer(gui.m_currentContainer), 0,
                     "Sorts this chest (merging partial stacks) using the same order as your inventory.");
                 _chestMode = Make(chestMenu, "", Sorter.CycleMode, 1, "Click to change what Sort and Sort chest order by.");
+                _backpackQuickStack = Make(chestMenu, "Quick stack", QuickStack.RunBackpack, 2,
+                    "Puts the items in your backpack into nearby chests that already hold the same kind of item.\nYour inventory stays as it is.");
+                _backpackQuickStack.gameObject.SetActive(false);
+                _chestMenuFor = ChestMenuFor.Chest;
                 _chestBadge = Badge.Create(gui.m_container, BoxOf(gui.m_container, gui.m_containerWeight), "StorageMaster_ChestBadge", chestMenu,
                     Plugin.ChestMenuOpen, Plugin.ChestBadgeX, Plugin.ChestBadgeY);
             }
             Refresh();
+        }
+
+        /// <summary>
+        /// Adventure Backpacks opens the backpack in the chest panel, where Sort chest sorts it (#6). When Quick stack leaves
+        /// the backpack out, the backpack gets a Quick stack of its own.
+        /// </summary>
+        private static void UpdateChestMenu(Container open)
+        {
+            if (_sortChest == null) return;
+            ChestMenuFor now = !AdventureBackpacksCompat.IsBackpack(open) ? ChestMenuFor.Chest
+                : Plugin.QuickStackIncludesBackpack.Value ? ChestMenuFor.Backpack : ChestMenuFor.BackpackWithQuickStack;
+            if (now == _chestMenuFor) return;
+            _chestMenuFor = now;
+            _sortChest.SetLabel(now == ChestMenuFor.Chest ? "Sort chest" : "Sort backpack");
+            bool quickStack = now == ChestMenuFor.BackpackWithQuickStack;
+            _backpackQuickStack.gameObject.SetActive(quickStack);
+            _chestMenu.sizeDelta = new Vector2(_chestMenu.sizeDelta.x, MenuHeight(quickStack ? 3 : 2));
         }
 
         /// <summary>The box around a text, i.e. its ancestor that sits directly in the panel (or the text's parent if none does).</summary>
@@ -85,9 +115,11 @@ namespace StorageMaster
         private static RectTransform Menu(string name, int buttons)
         {
             RectTransform menu = UIKit.DarkPanel(UIKit.CanvasRoot, name).rectTransform;
-            menu.sizeDelta = new Vector2(ButtonW + 2 * Pad, buttons * ButtonH + (buttons - 1) * Gap + 2 * Pad);
+            menu.sizeDelta = new Vector2(ButtonW + 2 * Pad, MenuHeight(buttons));
             return menu;
         }
+
+        private static float MenuHeight(int buttons) => buttons * ButtonH + (buttons - 1) * Gap + 2 * Pad;
 
         private static Button Make(RectTransform menu, string label, UnityEngine.Events.UnityAction onClick, int index, string tooltip)
         {

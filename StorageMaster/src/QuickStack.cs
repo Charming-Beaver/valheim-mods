@@ -12,7 +12,12 @@ namespace StorageMaster
         private static int _moved, _chests, _busy;
         private static float _reportAt = -1f;
 
-        public static void Run()
+        public static void Run() => Run(backpackOnly: false);
+
+        /// <summary>Quick stack from the Adventure Backpacks backpack only, for the backpack's own menu when Quick stack leaves it out.</summary>
+        public static void RunBackpack() => Run(backpackOnly: true);
+
+        private static void Run(bool backpackOnly)
         {
             Player player = Player.m_localPlayer;
             if (player == null) return;
@@ -22,7 +27,7 @@ namespace StorageMaster
                 return;
             }
 
-            var names = MovableNames(player);
+            var names = backpackOnly ? Names(AdventureBackpacksCompat.Backpack(player)) : MovableNames(player);
             // Pressed again before the last summary showed: add to it rather than losing what was already moved.
             if (_reportAt < 0f) _moved = _chests = _busy = 0;
             int asked = 0;
@@ -35,7 +40,7 @@ namespace StorageMaster
                     Container chest = c;
                     ChestAccess.Request(chest, granted =>
                     {
-                        if (granted) StackInto(chest.GetInventory());
+                        if (granted) StackInto(chest.GetInventory(), backpackOnly);
                         else _busy++;
                     });
                 }
@@ -43,23 +48,28 @@ namespace StorageMaster
 
             if (asked == 0)
             {
-                Plugin.Show("No nearby chest holds any of your items");
+                Plugin.Show(backpackOnly ? "No nearby chest holds any of your backpack's items" : "No nearby chest holds any of your items");
                 return;
             }
             // Answers can come from other players' games, so the summary waits a moment.
             _reportAt = Time.time + 1f;
         }
 
-        /// <summary>Stacks matching items from your inventory into a chest you already own; returns how many moved.</summary>
-        public static int StackInto(Inventory chest)
+        /// <summary>
+        /// Stacks matching items from your inventory (and backpack) into a chest you already own; returns how many moved.
+        /// <paramref name="backpackOnly"/> takes them only from the backpack.
+        /// </summary>
+        public static int StackInto(Inventory chest, bool backpackOnly = false)
         {
             Player player = Player.m_localPlayer;
             if (player == null) return 0;
+            Inventory backpack = backpackOnly ? AdventureBackpacksCompat.Backpack(player) : Backpack(player);
             _ours = true;
-            int moved;
+            int moved = 0;
             try
             {
-                moved = chest.StackAll(player.GetInventory(), message: false);
+                if (!backpackOnly) moved += chest.StackAll(player.GetInventory(), message: false);
+                if (backpack != null) moved += chest.StackAll(backpack, message: false);
             }
             finally
             {
@@ -92,8 +102,20 @@ namespace StorageMaster
             {
                 if (CanMove(player, item)) names.Add(item.m_shared.m_name);
             }
+            names.UnionWith(Names(Backpack(player)));
             return names;
         }
+
+        private static HashSet<string> Names(Inventory inventory)
+        {
+            var names = new HashSet<string>();
+            if (inventory == null) return names;
+            foreach (ItemDrop.ItemData item in inventory.GetAllItems()) names.Add(item.m_shared.m_name);
+            return names;
+        }
+
+        /// <summary>The Adventure Backpacks backpack you're wearing, when quick stack takes items from it too.</summary>
+        private static Inventory Backpack(Player player) => Plugin.QuickStackIncludesBackpack.Value ? AdventureBackpacksCompat.Backpack(player) : null;
 
         private static bool ContainsAny(Inventory inventory, HashSet<string> names)
         {
@@ -123,19 +145,21 @@ namespace StorageMaster
         private static class Patches
         {
             // The game's "Place stacks" moves everything that matches. Locked slots are always kept,
-            // and for quick stack also the hotbar. First, so other mods' patches know to skip this call before theirs
+            // and for quick stack also the hotbar. Quick stack also empties your backpack this way, where everything may go. First, so other mods' patches know to skip this call before theirs
             // run (see OtherPatches); the finalizer ends that.
             [HarmonyPatch(typeof(Inventory), nameof(Inventory.StackAll)), HarmonyPrefix, HarmonyPriority(Priority.First)]
             private static bool StackAll(Inventory __instance, Inventory fromInventory, bool message, ref int __result, MethodBase __originalMethod)
             {
                 Player player = Player.m_localPlayer;
-                if (player == null || fromInventory != player.GetInventory()) return true;
+                if (player == null) return true;
+                bool fromMe = fromInventory == player.GetInventory();
+                if (!fromMe && !(_ours && fromInventory == AdventureBackpacksCompat.Backpack(player))) return true;
                 OtherPatches.Begin(__originalMethod);
 
                 int before = __instance.CountItems(null);
                 foreach (ItemDrop.ItemData item in new List<ItemDrop.ItemData>(fromInventory.GetAllItems()))
                 {
-                    bool allowed = _ours ? CanMove(player, item) : CanPlace(player, fromInventory, item);
+                    bool allowed = !fromMe || (_ours ? CanMove(player, item) : CanPlace(player, fromInventory, item));
                     if (allowed && __instance.ContainsItemByName(item.m_shared.m_name) && __instance.AddItem(item))
                     {
                         fromInventory.RemoveItem(item);
@@ -149,7 +173,7 @@ namespace StorageMaster
                 }
                 __instance.Changed();
                 fromInventory.Changed();
-                Game.instance.IncrementPlayerStat(PlayerStatType.PlaceStacks);
+                if (fromMe) Game.instance.IncrementPlayerStat(PlayerStatType.PlaceStacks);
                 return false;
             }
 

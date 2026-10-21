@@ -58,6 +58,10 @@ namespace StorageMaster.UI
             Section(c, "Settings");
             CheckRow(c, "Auto-sort on pickup", "Sort your inventory every time you pick something up.", Plugin.AutoSort);
             CheckRow(c, "Quick stack skips the hotbar", "Keep everything in the hotbar row when quick stacking.", Plugin.QuickStackSkipsHotbar);
+            if (AdventureBackpacksCompat.Active)
+            {
+                CheckRow(c, "Quick stack from the backpack", "Also put items from the backpack you're wearing into the chests. Off: the open backpack's menu has a Quick stack of its own.", Plugin.QuickStackIncludesBackpack);
+            }
             NumberRow(c, "Quick stack range", "How far away chests can be for quick stack.", () => $"{Plugin.QuickStackRange.Value:0} m",
                 d => Plugin.QuickStackRange.Value = Mathf.Clamp(Plugin.QuickStackRange.Value + d * 5f, 5f, 50f));
             NumberRow(c, "Storage window range", "How far away chests can be for the Storage window.", () => $"{Plugin.StorageRange.Value:0} m",

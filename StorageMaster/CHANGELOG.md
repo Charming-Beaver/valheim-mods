@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+### Added
+- Works with Adventure Backpacks: Quick stack also puts items from the backpack you're wearing into nearby chests (setting "Quick stack from the backpack" in Options; when it's off, the open backpack gets a Quick stack button of its own), and Sort chest becomes Sort backpack when the backpack is open
+
 ### Changed
 - The Storage window opens right away and fills in nearest chest first, instead of freezing the game for a moment in bases with many chests
 

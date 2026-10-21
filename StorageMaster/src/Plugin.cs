@@ -18,6 +18,7 @@ namespace StorageMaster
         public static ConfigEntry<bool> AutoSort;
         public static ConfigEntry<float> QuickStackRange;
         public static ConfigEntry<bool> QuickStackSkipsHotbar;
+        public static ConfigEntry<bool> QuickStackIncludesBackpack;
 
         public static ConfigEntry<float> StorageRange;
         public static ConfigEntry<int> StorageMaxChests;
@@ -53,6 +54,8 @@ namespace StorageMaster
             AutoSort.SettingChanged += (_, __) => InventoryButtons.Refresh();
             QuickStackRange = Config.Bind("QuickStack", "Range", 10f, "Meters around you in which chests are used by quick stack.");
             QuickStackSkipsHotbar = Config.Bind("QuickStack", "SkipHotbar", true, "Quick stack leaves the hotbar row alone.");
+            QuickStackIncludesBackpack = Config.Bind("QuickStack", "IncludeBackpack", true,
+                "With Adventure Backpacks, quick stack also puts items from the backpack you're wearing into the chests. When off, the open backpack's menu gets a Quick stack button for the backpack alone.");
 
             StorageRange = Config.Bind("Storage", "Range", 15f, "Meters around you in which chests are opened by the Storage window.");
             StorageMaxChests = Config.Bind("Storage", "MaxChests", 24, "Most chests the Storage window opens at once (nearest first).");

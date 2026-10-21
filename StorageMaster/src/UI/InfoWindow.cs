@@ -29,7 +29,8 @@ namespace StorageMaster.UI
                     "Partial stacks of the same item are merged first, so three stacks of 30 wood become one of 90.");
             Para(c, "<color=#ffa13c>By: ...</color> chooses the order: Name A-Z, Name Z-A, Type (weapons, ammo, armor, tools, food, materials, trophies), " +
                     "Quality (best first), Weight (heaviest first) or Amount (biggest stacks first).");
-            Para(c, "<color=#ffa13c>Sort chest</color> is in the menu next to an open chest and sorts it the same way. " +
+            Para(c, "<color=#ffa13c>Sort chest</color> is in the menu next to an open chest and sorts it the same way" +
+                    (AdventureBackpacksCompat.Active ? " (with your backpack open, it's Sort backpack). " : ". ") +
                     "<color=#ffa13c>Auto-sort</color> sorts your inventory every time you pick something up.");
 
             Section(c, "Locked slots");
@@ -40,6 +41,7 @@ namespace StorageMaster.UI
             Section(c, "Quick stack");
             Para(c, "<color=#ffa13c>Quick stack</color> puts your items into nearby chests that already hold the same kind of item. " +
                     "Your hotbar, equipped items and locked slots stay with you, and chests marked Skip in the Storage window are left out. " +
+                    (AdventureBackpacksCompat.Active ? "Items in the backpack you're wearing go too. If you turn that off in Options, the open backpack gets a Quick stack of its own. " : "") +
                     "Each chest is handed over by whoever controls it first, so it's safe while your friend plays, and a chest they have open is skipped.");
 
             Section(c, "Storage window");
