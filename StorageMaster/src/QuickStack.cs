@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Reflection;
 using HarmonyLib;
 using UnityEngine;
 
@@ -106,29 +107,35 @@ namespace StorageMaster
         /// <summary>Equipped items, locked slots and (by default) the hotbar row always stay with you.</summary>
         public static bool CanMove(Player player, ItemDrop.ItemData item)
         {
+            return CanPlace(player, player.GetInventory(), item) && !(item.m_gridPos.y == 0 && Plugin.QuickStackSkipsHotbar.Value);
+        }
+
+        /// <summary>What "Place stacks" may move: not equipped items, locked slots, or other mods' slots that stay put.</summary>
+        private static bool CanPlace(Player player, Inventory inventory, ItemDrop.ItemData item)
+        {
             if (player.IsItemEquiped(item)) return false;
             if (Locks.IsLocked(item.m_gridPos.x, item.m_gridPos.y)) return false;
-            if (ExtraSlotsCompat.IsOutsideRegularRows(player.GetInventory(), item.m_gridPos)) return false;
-            return !(item.m_gridPos.y == 0 && Plugin.QuickStackSkipsHotbar.Value);
+            if (ExtraSlotsCompat.IsOutsideRegularRows(inventory, item.m_gridPos)) return false;
+            return !SeneaLCompat.Keeps(inventory, item);
         }
 
         [HarmonyPatch]
         private static class Patches
         {
             // The game's "Place stacks" moves everything that matches. Locked slots are always kept,
-            // and for quick stack also the hotbar.
-            [HarmonyPatch(typeof(Inventory), nameof(Inventory.StackAll)), HarmonyPrefix]
-            private static bool StackAll(Inventory __instance, Inventory fromInventory, bool message, ref int __result)
+            // and for quick stack also the hotbar. First, so other mods' patches know to skip this call before theirs
+            // run (see OtherPatches); the finalizer ends that.
+            [HarmonyPatch(typeof(Inventory), nameof(Inventory.StackAll)), HarmonyPrefix, HarmonyPriority(Priority.First)]
+            private static bool StackAll(Inventory __instance, Inventory fromInventory, bool message, ref int __result, MethodBase __originalMethod)
             {
                 Player player = Player.m_localPlayer;
                 if (player == null || fromInventory != player.GetInventory()) return true;
+                OtherPatches.Begin(__originalMethod);
 
                 int before = __instance.CountItems(null);
                 foreach (ItemDrop.ItemData item in new List<ItemDrop.ItemData>(fromInventory.GetAllItems()))
                 {
-                    bool allowed = _ours
-                        ? CanMove(player, item)
-                        : !player.IsItemEquiped(item) && !Locks.IsLocked(item.m_gridPos.x, item.m_gridPos.y) && !ExtraSlotsCompat.IsOutsideRegularRows(fromInventory, item.m_gridPos);
+                    bool allowed = _ours ? CanMove(player, item) : CanPlace(player, fromInventory, item);
                     if (allowed && __instance.ContainsItemByName(item.m_shared.m_name) && __instance.AddItem(item))
                     {
                         fromInventory.RemoveItem(item);
@@ -145,6 +152,9 @@ namespace StorageMaster
                 Game.instance.IncrementPlayerStat(PlayerStatType.PlaceStacks);
                 return false;
             }
+
+            [HarmonyPatch(typeof(Inventory), nameof(Inventory.StackAll)), HarmonyFinalizer]
+            private static void StackAllDone(MethodBase __originalMethod) => OtherPatches.End(__originalMethod);
         }
     }
 }

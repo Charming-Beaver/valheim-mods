@@ -44,6 +44,7 @@ namespace StorageMaster.Tests
         }
 
         [Test, SkipWithMod(ExtraSlotsCompat.Guid, "keeps hotbar items out of Place stacks (its setting \"Prevent Stack All of hotbar items\")")]
+        [SkipWithMod(SeneaLCompat.Guid, "keeps hotbar items out of Place stacks (its setting TransferHotbar); see SeneaLTests")]
         private static IEnumerator MovesTheHotbarWhenAllowed()
         {
             Plugin.QuickStackSkipsHotbar.Value = false;
@@ -92,6 +93,7 @@ namespace StorageMaster.Tests
 
         /// <summary>The game's own "Place stacks" button keeps locked slots too (but not the hotbar).</summary>
         [Test, SkipWithMod(ExtraSlotsCompat.Guid, "keeps hotbar items out of Place stacks (its setting \"Prevent Stack All of hotbar items\")")]
+        [SkipWithMod(SeneaLCompat.Guid, "keeps hotbar items out of Place stacks (its setting TransferHotbar); see SeneaLTests")]
         private static void PlaceStacksKeepsLockedSlots()
         {
             Container chest = SpawnChest();

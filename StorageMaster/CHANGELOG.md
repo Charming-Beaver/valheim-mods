@@ -4,6 +4,7 @@
 
 ### Fixed
 - With Quick Stack Store Sort Trash Restock, opening the Storage window, Quick stack and Gather here no longer quick stack your inventory into the chests
+- With SeneaL UI, Quick stack and Place stacks keep your hotbar and locked slots again, both Storage Master's and SeneaL UI's, and Quick stack counts only the items it moved
 
 ## 1.2.0
 
