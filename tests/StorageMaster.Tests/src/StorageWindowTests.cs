@@ -2,7 +2,9 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using StorageMaster.UI;
+using TMPro;
 using UnityEngine;
+using UnityEngine.UI;
 using static StorageMaster.Tests.TestKit;
 
 namespace StorageMaster.Tests
@@ -375,6 +377,71 @@ namespace StorageMaster.Tests
             StorageWindow.TidyUp();
             shown = MessageHud.instance.m_messageCenterText.text;
             Assert.True(shown.Contains("1 in use by someone else"), $"Message: \"{shown}\"");
+        }
+
+        /// <summary>
+        /// Closing the window keeps the cards for the next chests (#16). A reused card must show its new chest: its items,
+        /// name and Skip box, nothing left over from the chest it showed before.
+        /// </summary>
+        [Test]
+        private static IEnumerator ReusedCardsShowTheirOwnChest()
+        {
+            Container a = SpawnChest(3f, 0f), b = SpawnChest(4f, 90f), c = SpawnChest(5f, 180f);
+            Put(a.GetInventory(), "Wood", 10, 0, 0);
+            Put(a.GetInventory(), "Stone", 20, 4, 1);
+            Put(b.GetInventory(), "Resin", 5, 1, 0);
+            Put(c.GetInventory(), "Flint", 7, 2, 1);
+            yield return OpenAndWait();
+            // As a player would: name c, mark b Skip.
+            TMP_InputField name = StorageWindow._cards.First(card => card.Chest == c).Label;
+            name.text = "Building";
+            name.onEndEdit.Invoke(name.text);
+            SkipBox(StorageWindow._cards.First(card => card.Chest == b)).isOn = true;
+            yield return Frames(2);
+            AssertCardsShowTheirChests();
+            StorageWindow.Close();
+            yield return null;
+
+            // The nearest chest is gone and a new one is the farthest, so every card moves on to another chest.
+            RemoveChest(a);
+            Container d = SpawnChest(6f, 270f);
+            Put(d.GetInventory(), "Coal", 3, 0, 1);
+            yield return null;
+            yield return OpenAndWait();
+            yield return Frames(2);
+
+            Assert.Equal("b,c,d", string.Join(",", StorageWindow._cards.Select(card => card.Chest == b ? "b" : card.Chest == c ? "c" : "d")), "Chests in the window");
+            AssertCardsShowTheirChests();
+            Assert.True(SkipBox(StorageWindow._cards.First(card => card.Chest == b)).isOn, "b is still marked Skip");
+            Assert.True(StorageWindow._cards.Where(card => card.Chest != b).All(card => !SkipBox(card).isOn), "Only b is marked Skip");
+            Assert.Equal("Building", StorageWindow._cards.First(card => card.Chest == c).Label.text, "c's name");
+        }
+
+        private static Toggle SkipBox(StorageWindow.Card card) => card.Root.GetComponentInChildren<Toggle>(true);
+
+        /// <summary>Each card shows exactly its own chest: every slot with its item and amount, the others empty.</summary>
+        private static void AssertCardsShowTheirChests()
+        {
+            foreach (StorageWindow.Card card in StorageWindow._cards)
+            {
+                Inventory inv = card.Chest.GetInventory();
+                string chest = card.Label.text != "" ? card.Label.text : $"the chest at {card.Chest.transform.position}";
+                Assert.Equal(ChestAccess.GetLabel(card.Chest), card.Label.text, "Name on the card");
+                Assert.Equal(Exclusions.IsExcluded(card.Chest), SkipBox(card).isOn, $"Skip on the card of {chest}");
+                Assert.Equal(inv.GetWidth() * inv.GetHeight(), card.Grid.m_elements.Count, $"Slots on the card of {chest}");
+                foreach (InventoryElement element in card.Grid.m_elements)
+                {
+                    ItemDrop.ItemData item = inv.GetItemAt(element.Position.x, element.Position.y);
+                    string slot = $"slot {element.Position.x},{element.Position.y} of {chest}";
+                    if (item == null)
+                    {
+                        Assert.True(!element.m_used && !element.m_icon.enabled, $"{slot} is empty");
+                        continue;
+                    }
+                    Assert.True(element.m_used && element.m_icon.enabled && element.m_icon.sprite == item.GetIcon(), $"{slot} shows {item.m_shared.m_name}");
+                    Assert.Equal($"{item.m_stack}/{item.m_shared.m_maxStackSize}", element.m_amount.text, $"Amount in {slot}");
+                }
+            }
         }
 
         // ------------------------------------------------------------------ helpers
