@@ -17,6 +17,17 @@ gh api -X POST /repos/Charming-Beaver/valheim-mods/issues/<n>/issue-field-values
 ```
 Adding a field or an option (a new mod or source) needs the `admin:org` scope (`gh auth refresh -h github.com -s admin:org`); ask the maintainer.
 
+### Project board
+Issues and PRs are added automatically to the org project [CharmingBeaver's Valheim Mods](https://github.com/orgs/Charming-Beaver/projects/1) (one project for all mods; views split them by Mod). Keep its **Status** current:
+- `Inbox` (new, fields not set), `Backlog` (triaged), `Up next` (the next 1–3 things), `In progress`, `In review` (PR open), `Waiting` (for the reporter or more requests), `Done` (set automatically when closed or merged).
+- Creating an issue: set the fields and labels, then `Backlog`, `Up next` or `Waiting`. Starting work: `In progress`. Opening its PR: `In review`.
+- **Reply** (project field): `Pending` when an issue from Reddit or Nexus is fixed and the reporter should be told after the release; `Done` once they are. The "To reply" view lists the pending ones.
+
+`gh project item-edit` works but needs IDs; get them with `gh project field-list 1 --owner Charming-Beaver` and `gh project item-list 1 --owner Charming-Beaver`.
+
+### Milestones
+Each mod has an open milestone `<Mod> next` (e.g. `StorageMaster next`) for what goes into its next release, the same as the changelog's `Unreleased` section. Add an issue to it when its PR is opened (or when it's planned in). At release, rename the milestone to the version (`StorageMaster 1.2.1`), close it, and open a new `<Mod> next`.
+
 ### Labels
 - Type: `bug`, `enhancement`, `question`, etc. (GitHub defaults).
 - Area: `ui` (layout, rendering, usability of windows and buttons), `sorting` (Sort, Tidy up, Gather here, Quick stack, locked slots), `performance` (freezes, slowness), `accessibility`.
@@ -78,7 +89,7 @@ In-game tests live in `tests/<Mod>.Tests/` (lowercase `tests`, so it isn't mista
 
 ## Adding a new mod
 1. Create the mod folder (its name becomes the mod ID).
-2. Add the folder name as an option of the **Mod** issue field (see Fields).
+2. Add the folder name as an option of the **Mod** issue field (see Fields), and create its `<FolderName> next` milestone.
 3. Add the folder name to the "Which mod?" dropdown in `.github/ISSUE_TEMPLATE/bug_report.yml` and `feature_request.yml`. `.github/workflows/issue-mod.yml` uses the answer to set new issues' Mod field.
 4. Releases are tagged `<foldername lowercase>-v<version>` (e.g. `storagemaster-v1.0.1`). `.github/workflows/thunderstore.yml` uses the part before `-v` to find the mod folder, which needs a `thunderstore.toml`.
 5. For Nexus: upload the first version by hand (that creates the mod page and its main file), then add `<FolderName>/nexus.json` with the mod ID, the file ID (Files tab, "Advanced"), the file's display name and description. From then on `.github/workflows/nexus.yml` uploads each published release as a new version of that file.
