@@ -4,6 +4,8 @@ using System.Linq;
 using System.Reflection;
 using BepInEx.Bootstrap;
 using StorageMaster.UI;
+using UnityEngine;
+using UnityEngine.UI;
 using static StorageMaster.Tests.TestKit;
 
 namespace StorageMaster.Tests
@@ -118,6 +120,76 @@ namespace StorageMaster.Tests
             var shown = StorageWindow._playerGrid.m_elements.Where(e => e.gameObject.activeSelf).ToList();
             Assert.Equal(Mine.GetWidth() * rows, shown.Count, "Slots shown");
             Assert.True(shown.All(e => e.Position.y < rows), "Only regular rows shown");
+        }
+
+        /// <summary>
+        /// The badges sit just under SeneaL UI's own inventory and chest panels (the game's are hidden), look like its
+        /// pills, can be clicked, and by default cover none of its panels or each other (#64).
+        /// </summary>
+        [Test, RequiresMod(SeneaLCompat.Guid)]
+        private static IEnumerator BadgesSitNextToSeneaLsPanels()
+        {
+            InventoryGui gui = InventoryGui.instance;
+            gui.Show(SpawnChest());
+            yield return WaitUntil(() => InventoryGui.IsVisible() && SeneaLCompat.ChestShown && InventoryButtons._chestBadge != null
+                && InventoryButtons._chestBadge.Panel == SeneaLCompat.ChestPanel && InventoryButtons._chestBadge.gameObject.activeInHierarchy, "SeneaL UI's chest panel and its badge");
+            yield return InventorySettled();
+            Badge inventory = InventoryButtons._badge, chest = InventoryButtons._chestBadge;
+            RectTransform inventoryPanel = SeneaLCompat.InventoryPanel, chestPanel = SeneaLCompat.ChestPanel;
+            Assert.True(inventoryPanel != null, "SeneaL UI draws its own inventory panel");
+            Assert.True(inventory.Panel == inventoryPanel, "The inventory badge belongs to SeneaL UI's inventory panel");
+
+            foreach (Badge badge in new[] { inventory, chest })
+            {
+                Assert.True(badge.gameObject.activeInHierarchy && badge.IsInteractable(), $"{badge.name} is shown and can be clicked");
+                CanvasGroup blocking = badge.GetComponentsInParent<CanvasGroup>().FirstOrDefault(g => !g.interactable || !g.blocksRaycasts || g.alpha < 0.5f);
+                Assert.True(blocking == null, $"{badge.name} isn't in a hidden or unclickable group ({blocking?.name})");
+                Assert.True(badge.transform.GetSiblingIndex() < badge.Panel.GetSiblingIndex(), $"{badge.name} is drawn under its panel, so it slips under it when moved over it");
+                // SeneaL UI draws its pills' background on a child.
+                Image pill = inventoryPanel.Find("chip_shield/bg")?.GetComponent<Image>(), face = badge.transform.Find("bg")?.GetComponent<Image>();
+                Assert.True(pill != null && face != null, $"SeneaL UI's armor pill and {badge.name} have a background");
+                Assert.True(face.sprite == pill.sprite && face.color == pill.color, $"{badge.name} looks like SeneaL UI's pills (sprite {face.sprite?.name}/{pill.sprite?.name})");
+            }
+
+            var ours = new (string name, RectTransform rt)[]
+            {
+                ("inventory badge", inventory.Rect), ("inventory menu", inventory.Menu), ("chest badge", chest.Rect), ("chest menu", chest.Menu),
+            };
+            var theirs = new (string name, RectTransform rt)[] { ("inventory panel", inventoryPanel), ("chest panel", chestPanel) };
+            foreach (var a in ours)
+            {
+                foreach (var b in ours.Concat(theirs))
+                {
+                    if (a.rt == b.rt) continue;
+                    // Like the game's boxes, the badges tuck under their panel's edge a little.
+                    Rect ra = BadgeTests.Shrink(BadgeTests.InRoot(a.rt), 10f), rb = BadgeTests.Shrink(BadgeTests.InRoot(b.rt), 10f);
+                    Assert.True(!ra.Overlaps(rb), $"The {a.name} covers the {b.name} ({BadgeTests.InRoot(a.rt)} and {BadgeTests.InRoot(b.rt)})");
+                }
+            }
+            yield return Screenshot("seneal-badges");
+        }
+
+        [Test, RequiresMod(SeneaLCompat.Guid)]
+        private static IEnumerator ChestBadgeGoesWithSeneaLsChestPanel()
+        {
+            InventoryGui gui = InventoryGui.instance;
+            gui.Show(SpawnChest());
+            yield return WaitUntil(() => InventoryGui.IsVisible() && SeneaLCompat.ChestShown && InventoryButtons._chestBadge != null
+                && InventoryButtons._chestBadge.gameObject.activeInHierarchy, "SeneaL UI's chest panel and its badge");
+            Assert.True(InventoryButtons._chestBadge.Menu.gameObject.activeInHierarchy, "The chest menu is open");
+
+            gui.Hide();
+            yield return Frames(2);
+            yield return BadgeTests.ShowInventory();
+            yield return Frames(2);
+
+            Assert.True(!SeneaLCompat.ChestShown, "No chest shown");
+            Assert.True(!InventoryButtons._chestBadge.gameObject.activeInHierarchy, "The chest badge is hidden without a chest");
+            Assert.True(!InventoryButtons._chestMenu.gameObject.activeInHierarchy, "and so is its menu");
+            // As after a change in the Options window.
+            InventoryButtons.ApplyBadges();
+            yield return Frames(2);
+            Assert.True(!InventoryButtons._chestMenu.gameObject.activeInHierarchy, "The chest menu stays hidden when the badges are put back");
         }
 
         private static Type SlotsType => Chainloader.PluginInfos[SeneaLCompat.Guid].Instance.GetType().Assembly.GetType("SeneaLUI.Inv.Slots");

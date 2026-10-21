@@ -28,6 +28,7 @@ namespace StorageMaster
         private static Func<Inventory, int, int, bool> _toggleLock;
         private static Func<Inventory, HashSet<int>> _locksOf;
         private static Action _saveLocks;
+        private static FieldInfo _inventoryView, _chestView, _craftView;
 
         /// <summary>True when SeneaL UI is installed (it can still be switched off, or not laid out an inventory yet).</summary>
         public static bool Active
@@ -59,6 +60,46 @@ namespace StorageMaster
 
         /// <summary>Locks or unlocks a slot of your inventory with SeneaL UI's locks; returns whether it's locked now.</summary>
         public static bool ToggleLock(Inventory inventory, Vector2i pos) => HasLocks(inventory) && _toggleLock(inventory, pos.x, pos.y);
+
+        /// <summary>
+        /// SeneaL UI's own inventory panel, while it draws one: it then hides the game's (keeping it as an invisible
+        /// stand-in) and draws its panels in a node of its own over the game's inventory screen.
+        /// </summary>
+        public static RectTransform InventoryPanel => Shown(_inventoryView, needsShown: false);
+
+        /// <summary>
+        /// SeneaL UI's chest panel, while it draws chests itself (the game's is then invisible and can't be clicked),
+        /// also while no chest is open.
+        /// </summary>
+        public static RectTransform ChestPanel
+        {
+            get
+            {
+                Init();
+                if (_chestView == null || !(bool)_active.GetValue(null)) return null;
+                object v = _chestView.GetValue(null);
+                if (v == null || !(v.GetType().GetField("_applied", BindingFlags.NonPublic | BindingFlags.Instance)?.GetValue(v) is bool applied) || !applied) return null;
+                return v.GetType().GetProperty("Panel")?.GetValue(v) as RectTransform;
+            }
+        }
+
+        /// <summary>Whether SeneaL UI's chest panel shows a chest now.</summary>
+        public static bool ChestShown => Shown(_chestView, needsShown: true) != null;
+
+        /// <summary>SeneaL UI's crafting panel, while it shows one.</summary>
+        public static RectTransform CraftPanel => Shown(_craftView, needsShown: true);
+
+        private static RectTransform Shown(FieldInfo view, bool needsShown)
+        {
+            Init();
+            if (view == null || !(bool)_active.GetValue(null)) return null;
+            object v = view.GetValue(null);
+            if (v == null || !(v.GetType().GetProperty("Panel")?.GetValue(v) is RectTransform panel) || panel == null) return null;
+            // Its own switch (activeSelf), not the inventory screen's: that one is off whenever the inventory is closed.
+            if (!panel.gameObject.activeSelf) return null;
+            if (needsShown && !(v.GetType().GetProperty("Shown")?.GetValue(v) is bool shown && shown)) return null;
+            return panel;
+        }
 
         /// <summary>Locks these slots of your inventory with SeneaL UI's locks (it saves them on your character).</summary>
         public static void AddLocks(Inventory inventory, IEnumerable<Vector2i> slots)
@@ -120,6 +161,12 @@ namespace StorageMaster
             }
             else
                 Debug.LogWarning("[Storage Master] SeneaL UI's locks weren't found. Alt + click may lock a slot in both mods.");
+            Type views = assembly.GetType("SeneaLUI.Patches.InventoryGuiPatches");
+            _inventoryView = views?.GetField("View", flags);
+            _chestView = views?.GetField("Chest", flags);
+            _craftView = views?.GetField("Craft", flags);
+            if (_inventoryView == null || _chestView == null)
+                Debug.LogWarning("[Storage Master] SeneaL UI's panels weren't found. The menu buttons may sit under its panels.");
         }
     }
 }

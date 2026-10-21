@@ -95,8 +95,8 @@ namespace StorageMaster.Tests
             Assert.True(OwnLayerAbove(Inventory.Menu.gameObject, screen), "The menu is drawn over the inventory screen");
             Assert.True(!OwnLayerAbove(Inventory.gameObject, screen), "At its usual place the badge is drawn in its place, under the panel");
 
-            // Onto the crafting panel.
-            Rect crafting = InRoot(gui.m_crafting), badge = InRoot(Inventory.Rect);
+            // Onto the crafting panel (SeneaL UI's, when it draws its own).
+            Rect crafting = InRoot(SeneaLCompat.CraftPanel ?? gui.m_crafting), badge = InRoot(Inventory.Rect);
             Inventory.MoveTo(Inventory.Rect.anchoredPosition - Inventory.Home + (crafting.center - badge.center) / Inventory.Rect.lossyScale.x * UIKit.CanvasRoot.lossyScale.x);
             Assert.True(InRoot(Inventory.Rect).Overlaps(crafting), $"The badge is over the crafting panel ({InRoot(Inventory.Rect)}, {crafting})");
             Assert.True(OwnLayerAbove(Inventory.gameObject, screen), "Over the crafting panel the badge is drawn over it");
@@ -110,7 +110,7 @@ namespace StorageMaster.Tests
             go.TryGetComponent(out Canvas canvas) && canvas.overrideSorting && canvas.sortingOrder > sortingOrder;
 
         /// <summary>By default, nothing covers the game's armor and weight boxes, the chest panel, or each other.</summary>
-        [Test]
+        [Test, SkipWithMod(SeneaLCompat.Guid, "hides the game's panels and boxes; see SeneaLTests")]
         private static IEnumerator BadgesAndMenusCoverNothingAtFirst()
         {
             InventoryGui gui = InventoryGui.instance;
@@ -143,7 +143,7 @@ namespace StorageMaster.Tests
         /// The badges look like the game's weight boxes and, like them, are drawn before the panel's background,
         /// which covers their inner edge. They're also drawn under the game's boxes and ExtraSlots' panel.
         /// </summary>
-        [Test]
+        [Test, SkipWithMod(SeneaLCompat.Guid, "hides the game's panels and boxes; see SeneaLTests")]
         private static IEnumerator BadgesLookAndSitLikeTheWeightBoxes()
         {
             InventoryGui gui = InventoryGui.instance;
@@ -221,7 +221,7 @@ namespace StorageMaster.Tests
 
         // ------------------------------------------------------------------ helpers
 
-        private static IEnumerator ShowInventory()
+        public static IEnumerator ShowInventory()
         {
             InventoryGui.instance.Show(null);
             yield return WaitUntil(() => InventoryGui.IsVisible() && Inventory != null, "the inventory and its badge");
@@ -229,13 +229,13 @@ namespace StorageMaster.Tests
             yield return InventorySettled();
         }
 
-        private static void Click(GameObject go)
+        public static void Click(GameObject go)
         {
             ExecuteEvents.Execute(go, new PointerEventData(EventSystem.current) { button = PointerEventData.InputButton.Left }, ExecuteEvents.pointerClickHandler);
         }
 
         /// <summary>Where a rect is on screen, in the units of the UI's root canvas.</summary>
-        private static Rect InRoot(RectTransform rt)
+        public static Rect InRoot(RectTransform rt)
         {
             var corners = new Vector3[4];
             rt.GetWorldCorners(corners);
@@ -246,7 +246,7 @@ namespace StorageMaster.Tests
 
         private static string Path(Transform t) => t.parent == null ? t.name : t.parent.name + "/" + t.name;
 
-        private static Rect Shrink(Rect r, float by) => Rect.MinMaxRect(r.xMin + by, r.yMin + by, r.xMax - by, r.yMax - by);
+        public static Rect Shrink(Rect r, float by) => Rect.MinMaxRect(r.xMin + by, r.yMin + by, r.xMax - by, r.yMax - by);
 
         private static bool Inside(Rect inner, Rect outer) =>
             inner.xMin >= outer.xMin - 0.5f && inner.yMin >= outer.yMin - 0.5f && inner.xMax <= outer.xMax + 0.5f && inner.yMax <= outer.yMax + 0.5f;
