@@ -4,13 +4,24 @@ Valheim (BepInEx 5) mods by Charming Beaver. Each mod lives in its own top-level
 
 ## Issues
 
+### Fields
+Every issue gets these organization issue fields (one value each):
+- **Mod** (public): the mod folder name, e.g. `StorageMaster`. Set automatically for issues opened from the templates.
+- **Source** (public), where it came from: `Reddit` (r/ModdedValheim threads), `Nexus` (the mod's posts on Nexus Mods), `GitHub` (opened by a player here; set automatically), `Tests` (found by the in-game tests), `CharmingBeaver` (the maintainer's own findings and ideas). When several places reported it, use the first one and mention the others in the body.
+- **Priority** (members only): `Urgent` (crashes, or items lost for everyone), `High` (items end up where they shouldn't, broken promises like locked slots), `Medium` (noticeable for many players, or a player is waiting for it), `Low` (nice to have, or waiting for the reporter or more requests).
+
+`gh` has no command for fields, so use the REST API with the fields' IDs (from `gh api /orgs/Charming-Beaver/issue-fields`; Mod 48751818, Source 48751819, Priority 48541243) and the option's name. One call can set several fields and leaves the others alone:
+```sh
+gh api -X POST /repos/Charming-Beaver/valheim-mods/issues/<n>/issue-field-values --input body.json
+# body.json: {"issue_field_values":[{"field_id":48751818,"value":"StorageMaster"},{"field_id":48751819,"value":"Reddit"},{"field_id":48541243,"value":"High"}]}
+```
+Adding a field or an option (a new mod or source) needs the `admin:org` scope (`gh auth refresh -h github.com -s admin:org`); ask the maintainer.
+
 ### Labels
-- Every issue gets the label of the mod it's about: `mod: <FolderName>`, e.g. `mod: StorageMaster`.
 - Type: `bug`, `enhancement`, `question`, etc. (GitHub defaults).
-- Area: `ui` (layout, rendering, usability of windows and buttons), `sorting` (Sort, Tidy up, Gather here, Quick stack, locked slots), `performance` (freezes, slowness).
+- Area: `ui` (layout, rendering, usability of windows and buttons), `sorting` (Sort, Tidy up, Gather here, Quick stack, locked slots), `performance` (freezes, slowness), `accessibility`.
 - `mod-compatibility`: conflicts or integration with *other people's* mods or modpacks.
-- Source, where the report came from: `source: <Place>`, e.g. `source: Reddit` (the r/ModdedValheim release thread) and `source: Nexus` (the mod's posts on Nexus Mods). Create one for a new source when needed. Issues found by us (e.g. by the tests) get no source label.
-- Create a new label when an issue needs one rather than squeezing it into an existing one.
+- Create a new label when an issue needs one rather than squeezing it into an existing one. Mod, source and priority are fields, not labels.
 
 ### Issue body
 Use these sections, skipping any that don't apply:
@@ -67,7 +78,7 @@ In-game tests live in `tests/<Mod>.Tests/` (lowercase `tests`, so it isn't mista
 
 ## Adding a new mod
 1. Create the mod folder (its name becomes the mod ID).
-2. Create the `mod: <FolderName>` label.
-3. Add the folder name to the "Which mod?" dropdown in `.github/ISSUE_TEMPLATE/bug_report.yml` and `feature_request.yml`. `.github/workflows/label-mod.yml` uses the answer to label new issues.
+2. Add the folder name as an option of the **Mod** issue field (see Fields).
+3. Add the folder name to the "Which mod?" dropdown in `.github/ISSUE_TEMPLATE/bug_report.yml` and `feature_request.yml`. `.github/workflows/issue-mod.yml` uses the answer to set new issues' Mod field.
 4. Releases are tagged `<foldername lowercase>-v<version>` (e.g. `storagemaster-v1.0.1`). `.github/workflows/thunderstore.yml` uses the part before `-v` to find the mod folder, which needs a `thunderstore.toml`.
 5. For Nexus: upload the first version by hand (that creates the mod page and its main file), then add `<FolderName>/nexus.json` with the mod ID, the file ID (Files tab, "Advanced"), the file's display name and description. From then on `.github/workflows/nexus.yml` uploads each published release as a new version of that file.

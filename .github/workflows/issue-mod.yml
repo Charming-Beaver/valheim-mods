@@ -1,0 +1,45 @@
+# Sets the "Mod" issue field on issues opened from the issue templates, and "Source" to GitHub for issues that players
+# open themselves.
+#
+# The templates ask "Which mod?" with a dropdown of mod folder names. This reads the answer from the issue body and
+# sets the Mod field to it (again when the answer is edited). Mod and Source are organization issue fields; the
+# answer has to be one of the Mod field's options, otherwise the run fails with GitHub's error.
+
+name: Set the issue's mod
+
+on:
+  issues:
+    types: [opened, edited]
+
+permissions:
+  issues: write
+
+env:
+  # From: gh api /orgs/Charming-Beaver/issue-fields
+  MOD_FIELD: 48751818
+  SOURCE_FIELD: 48751819
+
+jobs:
+  mod:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const issue = context.payload.issue;
+            const match = (issue.body || '').match(/### Which mod\?\s*\n+([^\n]+)/);
+            if (!match) return;
+            const mod = match[1].trim();
+            if (mod === '_No response_') return;
+
+            const values = [{ field_id: Number(process.env.MOD_FIELD), value: mod }];
+            // Issues the maintainers open get their source set by hand (Reddit, Nexus, Tests, ...).
+            const own = ['OWNER', 'MEMBER', 'COLLABORATOR'].includes(issue.author_association);
+            if (context.payload.action === 'opened' && !own) {
+              values.push({ field_id: Number(process.env.SOURCE_FIELD), value: 'GitHub' });
+            }
+
+            await github.request('POST /repos/{owner}/{repo}/issues/{issue_number}/issue-field-values', {
+              ...context.repo, issue_number: issue.number, issue_field_values: values,
+            });
+            core.info(`#${issue.number}: ${values.map(v => v.value).join(', ')}`);

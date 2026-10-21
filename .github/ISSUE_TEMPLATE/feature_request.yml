@@ -2,8 +2,8 @@ name: Feature request
 description: An idea for a new feature, or support for another mod
 labels: ["enhancement"]
 body:
-  # The "mod: <answer>" label is added automatically by .github/workflows/label-mod.yml.
-  # When adding a mod, add its folder name here, to bug_report.yml and create the "mod: <FolderName>" label.
+  # The issue's Mod field is set from the answer by .github/workflows/issue-mod.yml.
+  # When adding a mod, add its folder name here, to bug_report.yml and add it as an option of the Mod issue field.
   - type: dropdown
     id: mod
     attributes:
