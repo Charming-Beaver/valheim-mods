@@ -40,7 +40,7 @@ Everything looks and feels like Valheim's own UI, and the whole mod runs on your
 - A short summary shows how many items went into how many chests.
 
 ### Storage window
-Opens every chest around you at once, next to your inventory, using the game's own item grids.
+Opens every chest around you at once, next to your inventory, using the game's own item grids. With Adventure Backpacks, the backpack you're wearing is shown under your inventory.
 
 ![Hide inventory gives the chests the whole window](https://raw.githubusercontent.com/Charming-Beaver/valheim-mods/main/StorageMaster/images/hide-inventory.jpg)
 
@@ -144,7 +144,7 @@ All settings live in `BepInEx/config/charmingbeaver.valheim.storagemaster.cfg`. 
 
 ## Compatibility
 
-- Works with **Adventure Backpacks**: Quick stack takes items from the backpack you're wearing, and Sort chest sorts the open backpack.
+- Works with **Adventure Backpacks**: Quick stack takes items from the backpack you're wearing, Sort chest sorts the open backpack, and the Storage window shows the backpack under your inventory.
 - Made for keyboard and mouse. Controllers aren't supported in the mod's windows.
 - Other mods that change the inventory screen or chest handling (sorting, auto-storing, quick stacking) may clash with this one. If something behaves oddly, try without them first.
 
