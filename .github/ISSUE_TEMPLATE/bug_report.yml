@@ -6,8 +6,8 @@ body:
     attributes:
       value: Thanks for taking the time to report this! The more of the fields below you fill in, the faster it can be fixed.
 
-  # The "mod: <answer>" label is added automatically by .github/workflows/label-mod.yml.
-  # When adding a mod, add its folder name here, to feature_request.yml and create the "mod: <FolderName>" label.
+  # The issue's Mod field is set from the answer by .github/workflows/issue-mod.yml.
+  # When adding a mod, add its folder name here, to feature_request.yml and add it as an option of the Mod issue field.
   - type: dropdown
     id: mod
     attributes:
