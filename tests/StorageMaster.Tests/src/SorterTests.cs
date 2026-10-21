@@ -44,8 +44,9 @@ namespace StorageMaster.Tests
         [Test]
         private static void SortPlayer_LeavesLockedSlotsAlone()
         {
-            Lock(0, 1);
             ItemDrop.ItemData locked = Put(Mine, "Wood", 10, 0, 1);
+            // Locked after the item is in: with SeneaL UI, a locked slot takes no new items.
+            Lock(0, 1);
             Put(Mine, "Wood", 10, 5, 2);
             Put(Mine, "Stone", 10, 3, 3);
 

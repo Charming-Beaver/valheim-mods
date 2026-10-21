@@ -28,8 +28,9 @@ namespace StorageMaster.Tests
             Put(chest.GetInventory(), "Wood", 1, 0, 0);
             Put(chest.GetInventory(), "Club", 1, 1, 0);
             Put(Mine, "Wood", 5, 0, 0);
-            Lock(0, 1);
             Put(Mine, "Wood", 7, 0, 1);
+            // Locked after the item is in: with SeneaL UI, a locked slot takes no new items.
+            Lock(0, 1);
             Put(Mine, "Wood", 10, 4, 2);
             ItemDrop.ItemData club = Put(Mine, "Club", 1, 1, 2);
             Me.EquipItem(club);
@@ -100,8 +101,9 @@ namespace StorageMaster.Tests
             Inventory inv = chest.GetInventory();
             Put(inv, "Wood", 1, 0, 0);
             Put(Mine, "Wood", 5, 0, 0);
-            Lock(0, 1);
             Put(Mine, "Wood", 7, 0, 1);
+            // Locked after the item is in: with SeneaL UI, a locked slot takes no new items.
+            Lock(0, 1);
             Put(Mine, "Wood", 10, 4, 2);
 
             inv.StackAll(Mine, message: false);
