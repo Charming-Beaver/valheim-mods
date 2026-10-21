@@ -115,6 +115,15 @@ namespace StorageMaster.UI
                 image.material = null;
                 Color brass = SeneaLTheme.Brass;
                 image.color = new Color(brass.r, brass.g, brass.b, Kind == Role.ScrollTrack ? 0.12f : 0.55f);
+                if (Kind == Role.ScrollHandle && _selectable != null)
+                {
+                    // The game's scroll bar tints its thumb; SeneaL UI's is plain brass, a little lighter under the mouse.
+                    ColorBlock colors = _selectable.colors;
+                    colors.normalColor = colors.selectedColor = Color.white;
+                    colors.highlightedColor = colors.pressedColor = new Color(1.25f, 1.25f, 1.25f, 1f);
+                    _selectable.colors = colors;
+                    image.canvasRenderer.SetColor(Color.white);
+                }
                 return;
             }
 

@@ -1123,8 +1123,23 @@ namespace StorageMaster.UI
             return null;
         }
 
+        /// <summary>
+        /// The grid's slots in SeneaL UI's look while it's on, like the rest of the window. The game makes the slots when
+        /// the grid gets its size, so new ones are marked when they show up.
+        /// </summary>
+        private static void SkinSlots(InventoryGrid grid)
+        {
+            List<InventoryElement> slots = grid.m_elements;
+            if (slots.Count == 0 || slots[0] == null || slots[0].GetComponent<Themed>() != null) return;
+            foreach (InventoryElement slot in slots)
+            {
+                if (slot != null && slot.TryGetComponent(out Image bg)) Themed.Mark(bg, Themed.Role.Slot);
+            }
+        }
+
         private static void Highlight(InventoryGrid grid, Inventory inv)
         {
+            SkinSlots(grid);
             string search = _search.text.Trim().ToLowerInvariant();
             bool searching = search.Length > 0;
             foreach (InventoryElement element in grid.m_elements)
@@ -1147,6 +1162,7 @@ namespace StorageMaster.UI
                     Image img = rt.gameObject.AddComponent<Image>();
                     img.color = new Color(1f, 0.631f, 0.235f, HighlightAlpha);
                     img.raycastTarget = false;
+                    Themed.Mark(img, Themed.Role.Tint);
                     hl = rt;
                 }
                 hl.gameObject.SetActive(match);
