@@ -137,7 +137,7 @@ namespace StorageMaster
         {
             if (player.IsItemEquiped(item)) return false;
             if (Locks.IsLocked(item.m_gridPos.x, item.m_gridPos.y)) return false;
-            if (ExtraSlotsCompat.IsOutsideRegularRows(inventory, item.m_gridPos)) return false;
+            if (!PlayerSlots.IsRegular(inventory, item.m_gridPos)) return false;
             return !SeneaLCompat.Keeps(inventory, item);
         }
 

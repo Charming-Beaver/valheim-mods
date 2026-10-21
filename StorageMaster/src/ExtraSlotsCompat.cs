@@ -41,9 +41,6 @@ namespace StorageMaster
             return _isSlot != null && _isSlot(pos);
         }
 
-        /// <summary>True for a player inventory position outside the regular rows (ExtraSlots' slots).</summary>
-        public static bool IsOutsideRegularRows(Inventory inventory, Vector2i pos) => pos.y >= PlayerRows(inventory) || IsSlot(pos);
-
         private static void Init()
         {
             if (_looked) return;

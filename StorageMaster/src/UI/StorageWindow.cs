@@ -696,7 +696,7 @@ namespace StorageMaster.UI
         private static void FitPlayerGrids(Inventory inv, Inventory backpack)
         {
             float w = inv.GetWidth() * Space;
-            float h = ExtraSlotsCompat.PlayerRows(inv) * Space;
+            float h = PlayerSlots.Rows(inv) * Space;
             float available = H - GridTop - SelH - 40;
             float contentH;
             if (backpack == null)
@@ -737,15 +737,16 @@ namespace StorageMaster.UI
         }
 
         /// <summary>
-        /// ExtraSlots' slots are rows below the regular inventory. They're shown in ExtraSlots' own panel, and dropping
-        /// things into them here would skip its checks, so the window only shows the regular rows.
+        /// Other mods' slots (ExtraSlots, SeneaL UI) are rows below the regular inventory. They're shown in those mods' own
+        /// panels, and dropping things into them here would skip their checks, so the window only shows the regular slots
+        /// (without SeneaL UI's unusable ones).
         /// </summary>
         private static void HideSlotRows(Inventory inv)
         {
-            if (!ExtraSlotsCompat.Active) return;
+            if (!PlayerSlots.OtherModsSlots) return;
             foreach (InventoryElement element in _playerGrid.m_elements)
             {
-                bool slot = ExtraSlotsCompat.IsOutsideRegularRows(inv, element.Position);
+                bool slot = !PlayerSlots.IsRegular(inv, element.Position);
                 if (element.gameObject.activeSelf == slot) element.gameObject.SetActive(!slot);
             }
         }
