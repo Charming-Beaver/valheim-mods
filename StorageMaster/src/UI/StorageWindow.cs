@@ -15,7 +15,8 @@ namespace StorageMaster.UI
     /// </summary>
     public static class StorageWindow
     {
-        private const float SelH = 250f;
+        // Taller with Adventure Backpacks, for "Also gather from my backpack".
+        private static float SelH = 250f;
         private const float GridTop = 160f;
         private const float CardPad = 10f, CardGap = 8f, CardHeader = 92f, MinCardW = 380f;
         private const float HighlightAlpha = 0.32f;
@@ -55,8 +56,12 @@ namespace StorageMaster.UI
         private static TextMeshProUGUI _rangeValue, _chestsValue;
         private static bool _settingsChanged;
         private static RectTransform _cardList;
-        private static RectTransform _playerArea;
+        private static RectTransform _playerArea, _playerContent;
         private static InventoryGrid _playerGrid;
+        // With Adventure Backpacks, the backpack you're wearing is shown under your inventory (#60).
+        private static InventoryGrid _backpackGrid;
+        private static TextMeshProUGUI _backpackTitle;
+        private const float BackpackTitleH = 40f;
         // Nearest first. A card without a Root is still waiting to be built (see BuildSome).
         private static readonly List<Card> _cards = new List<Card>();
         // Cards of closed chests, hidden and kept for the next chest of the same size: building one is the slow part.
@@ -66,7 +71,7 @@ namespace StorageMaster.UI
         private static TMP_InputField _search;
         private static Image _selIcon;
         private static TextMeshProUGUI _selName, _selInfo, _summary;
-        private static Toggle _includeMe;
+        private static Toggle _includeMe, _includeBackpack;
 
         private static Inventory _heldInv;
         private static ItemDrop.ItemData _heldItem;
@@ -281,16 +286,28 @@ namespace StorageMaster.UI
             if (removed) LayoutCards();
             BuildSome();
 
-            if (_heldItem != null && (_heldInv == null || !_heldInv.ContainsItem(_heldItem))) ClearHeld();
+            Inventory backpack = AdventureBackpacksCompat.Backpack(player);
+            if (_includeBackpack != null && _includeBackpack.interactable != (backpack != null)) _includeBackpack.interactable = backpack != null;
+            // Also when the item was taken from a backpack that you've taken off since.
+            if (_heldItem != null && (_heldInv == null || !_heldInv.ContainsItem(_heldItem) ||
+                                      (_heldInv != player.GetInventory() && _heldInv != backpack && _cards.All(c => c.Chest == null || _heldInv != c.Inv))))
+            {
+                ClearHeld();
+            }
 
             if (Plugin.StorageShowInventory.Value)
             {
                 Inventory mine = player.GetInventory();
-                FitPlayerGrid(mine);
+                FitPlayerGrids(mine, backpack);
                 _playerGrid.UpdateInventory(mine, player, _heldItem);
                 HideSlotRows(mine);
                 Highlight(_playerGrid, mine);
                 Locks.DrawOverlays(_playerGrid);
+                if (backpack != null)
+                {
+                    _backpackGrid.UpdateInventory(backpack, null, _heldItem);
+                    Highlight(_backpackGrid, backpack);
+                }
             }
             foreach (Card card in _cards)
             {
@@ -324,7 +341,9 @@ namespace StorageMaster.UI
             W = Mathf.Max(1000f, _builtFor.x - 60f);
             H = Mathf.Max(700f, _builtFor.y - 140f);
             Space = InventoryGui.instance.ContainerGrid.m_elementSpace;
-            LeftW = Mathf.Max(520f, 8 * Space + 10f);
+            // Room for 8 slots and the scroll bar, which shows when a backpack under the inventory doesn't fit.
+            LeftW = Mathf.Max(520f, 8 * Space + 28f);
+            SelH = AdventureBackpacksCompat.Active ? 280f : 250f;
 
             _root = UIKit.Rect(UIKit.CanvasRoot, "StorageMasterStorage").Fill().gameObject;
             _root.AddComponent<Image>().color = new Color(0, 0, 0, 0.35f);
@@ -362,8 +381,16 @@ namespace StorageMaster.UI
             // Left: your inventory and the selected item.
             _leftTitle = UIKit.Text(window, "Your inventory", 24, UIKit.Orange, norse: true).rectTransform.TopLeft(24, 124, LeftW, 32);
             _playerArea = UIKit.Rect(window, "player").TopLeft(24, GridTop, LeftW, H - GridTop - SelH - 40);
-            _playerGrid = MakeGrid(_playerArea);
+            // Your inventory and, with Adventure Backpacks, your backpack under it. Scrolls when they don't both fit.
+            _playerContent = UIKit.ScrollList(_playerArea, "scroll", out _, 0, 0);
+            ((RectTransform)_playerContent.parent.parent).Fill();
+            UnityEngine.Object.DestroyImmediate(_playerContent.GetComponent<ContentSizeFitter>());
+            UnityEngine.Object.DestroyImmediate(_playerContent.GetComponent<VerticalLayoutGroup>());
+            _playerGrid = MakeGrid(_playerContent);
             ((RectTransform)_playerGrid.transform).TopLeft(0, 0, 8 * Space, 4 * Space);
+            _backpackTitle = UIKit.Text(_playerContent, "", 24, UIKit.Orange, norse: true);
+            _backpackGrid = MakeGrid(_playerContent);
+            ((RectTransform)_backpackGrid.transform).TopLeft(0, 0, 3 * Space, Space);
 
             _selPanel = UIKit.Inset(window, "selection").rectTransform;
             _selPanel.anchorMin = _selPanel.anchorMax = new Vector2(0, 0);
@@ -379,12 +406,19 @@ namespace StorageMaster.UI
             _selInfo.rectTransform.TopLeft(90, 46, LeftW - 104, 60);
             _includeMe = UIKit.Check(_selPanel, "Also gather from my inventory (not hotbar or locked slots)", false, null, LeftW - 28);
             ((RectTransform)_includeMe.transform).TopLeft(14, 108, LeftW - 28, 26);
+            float helpTop = 144;
+            if (AdventureBackpacksCompat.Active)
+            {
+                _includeBackpack = UIKit.Check(_selPanel, "Also gather from my backpack", false, null, LeftW - 28);
+                ((RectTransform)_includeBackpack.transform).TopLeft(14, 138, LeftW - 28, 26);
+                helpTop += 30;
+            }
             UIKit.Text(_selPanel,
                 "<color=#ffa13c>Click</color> pick up / put down    <color=#ffa13c>Shift+click</color> take half\n" +
                 "<color=#ffa13c>Ctrl+click</color> move between you and the chests\n" +
                 "<color=#ffa13c>Right-click</color> choose an item to find and gather\n" +
                 "<color=#ffa13c>Alt+click</color> lock a slot of your inventory    <color=#ffa13c>Esc</color> drop / close",
-                15, UIKit.Grey).Wrap().rectTransform.TopLeft(14, 144, LeftW - 28, SelH - 152);
+                15, UIKit.Grey).Wrap().rectTransform.TopLeft(14, helpTop, LeftW - 28, SelH - helpTop - 8);
 
             // Right: the chests, laid out side by side and wrapping into rows.
             _chestsInset = UIKit.Inset(window, "chests").rectTransform.Anchor(0, 0, 1, 1, 24, 24, 24, 124);
@@ -655,18 +689,51 @@ namespace StorageMaster.UI
         }
 
         /// <summary>
-        /// Sizes your inventory grid to exactly its slots (the game lays slots out from the grid's width when they're
-        /// created, so this must happen before it updates) and shrinks it when it has many rows.
+        /// Sizes your inventory grid (and your backpack's) to exactly its slots (the game lays slots out from the grid's
+        /// width when they're created, so this must happen before it updates). Alone, your inventory shrinks when it has
+        /// many rows; with a backpack under it, both keep their size and the area scrolls when they don't fit.
         /// </summary>
-        private static void FitPlayerGrid(Inventory inv)
+        private static void FitPlayerGrids(Inventory inv, Inventory backpack)
         {
             float w = inv.GetWidth() * Space;
             float h = ExtraSlotsCompat.PlayerRows(inv) * Space;
             float available = H - GridTop - SelH - 40;
-            float scale = Mathf.Min(1f, available / h, LeftW / w);
-            RectTransform rt = (RectTransform)_playerGrid.transform;
+            float contentH;
+            if (backpack == null)
+            {
+                float scale = Mathf.Min(1f, available / h, LeftW / w);
+                Fit(_playerGrid, 0f, w, h, scale);
+                contentH = h * scale;
+            }
+            else
+            {
+                float bw = backpack.GetWidth() * Space, bh = backpack.GetHeight() * Space;
+                // The scroll bar takes some of the width when it shows.
+                float width = h + BackpackTitleH + bh > available ? LeftW - 18f : LeftW;
+                float scale = Mathf.Min(1f, width / w);
+                Fit(_playerGrid, 0f, w, h, scale);
+                float y = h * scale;
+                _backpackTitle.rectTransform.TopLeft(0, y + 6, width, BackpackTitleH - 10);
+                string title = Localization.instance.Localize(backpack.GetName());
+                if (_backpackTitle.text != title) _backpackTitle.text = title;
+                y += BackpackTitleH;
+                float backpackScale = Mathf.Min(1f, width / bw);
+                Fit(_backpackGrid, y, bw, bh, backpackScale);
+                contentH = y + bh * backpackScale;
+            }
+            if (_backpackGrid.gameObject.activeSelf != (backpack != null))
+            {
+                _backpackGrid.gameObject.SetActive(backpack != null);
+                _backpackTitle.gameObject.SetActive(backpack != null);
+            }
+            if (!Mathf.Approximately(_playerContent.sizeDelta.y, contentH)) _playerContent.sizeDelta = new Vector2(0, contentH);
+        }
+
+        private static void Fit(InventoryGrid grid, float y, float w, float h, float scale)
+        {
+            RectTransform rt = (RectTransform)grid.transform;
             rt.localScale = new Vector3(scale, scale, 1);
-            rt.sizeDelta = new Vector2(w, h);
+            rt.TopLeft(0, y, w, h);
         }
 
         /// <summary>
@@ -763,16 +830,19 @@ namespace StorageMaster.UI
             if (_follower != null) _follower.gameObject.SetActive(false);
         }
 
-        /// <summary>Ctrl + click: chest item goes to you; your item goes to a chest that already has it (or any with room).</summary>
+        /// <summary>
+        /// Ctrl + click: chest item goes to you; your item (or your backpack's) goes to a chest that already has it (or
+        /// any with room).
+        /// </summary>
         private static void QuickMove(Inventory from, ItemDrop.ItemData item)
         {
             Player player = Player.m_localPlayer;
             Inventory mine = player.GetInventory();
             if (item.m_shared.m_questItem) return;
             int before = item.m_stack;
-            if (from == mine)
+            if (from == mine || from == AdventureBackpacksCompat.Backpack(player))
             {
-                if (player.IsItemEquiped(item))
+                if (from == mine && player.IsItemEquiped(item))
                 {
                     Plugin.Show("Unequip it first");
                     return;
@@ -785,7 +855,7 @@ namespace StorageMaster.UI
                     Plugin.Show("No room in the open chests");
                     return;
                 }
-                dest.Inv.MoveItemToThis(mine, item);
+                dest.Inv.MoveItemToThis(from, item);
             }
             else
             {
@@ -834,9 +904,10 @@ namespace StorageMaster.UI
             var order = new List<Card>();
             for (int i = 0; i < ready.Count; i++) order.Add(ready[(start + i) % ready.Count]);
 
-            int moved = Gather(_selected, order, _includeMe.isOn, out int intoTarget, out int chestsUsed);
+            Inventory backpack = IncludedBackpack();
+            int moved = Gather(_selected, order, _includeMe.isOn, out int intoTarget, out int chestsUsed, backpack);
             string name = Localization.instance.Localize(_selected);
-            int remaining = TotalEverywhere(_selected, _includeMe.isOn) - target.Inv.CountItems(_selected);
+            int remaining = TotalEverywhere(_selected, _includeMe.isOn, backpack) - target.Inv.CountItems(_selected);
             Plugin.Show(moved == 0
                 ? $"Nothing to gather: all {name} already in place"
                 : $"Gathered {moved} {name}" + (chestsUsed > 1 ? $"\n<size=70%>{intoTarget} into this chest, the rest into {chestsUsed - 1} more</size>" : "") +
@@ -859,11 +930,15 @@ namespace StorageMaster.UI
             return $"\n<size=70%><color=#ffa13c>{total} chest{(total == 1 ? " was" : "s were")} left out: {string.Join(", ", parts)}</color></size>";
         }
 
+        /// <summary>The backpack you're wearing, when "Also gather from my backpack" is ticked.</summary>
+        private static Inventory IncludedBackpack() =>
+            _includeBackpack != null && _includeBackpack.isOn ? AdventureBackpacksCompat.Backpack(Player.m_localPlayer) : null;
+
         /// <summary>
         /// Fills the chests in <paramref name="order"/> one after another with the given item, taking it from
-        /// chests later in the order (and optionally from your inventory). Returns how many items moved.
+        /// chests later in the order (and optionally from your inventory and your backpack). Returns how many items moved.
         /// </summary>
-        private static int Gather(string name, List<Card> order, bool includeMe, out int intoFirst, out int chestsUsed)
+        private static int Gather(string name, List<Card> order, bool includeMe, out int intoFirst, out int chestsUsed, Inventory backpack = null)
         {
             Player player = Player.m_localPlayer;
             Inventory mine = player.GetInventory();
@@ -876,6 +951,7 @@ namespace StorageMaster.UI
                 int before = dest.CountItems(name);
                 var sources = new List<Inventory>();
                 if (includeMe) sources.Add(mine);
+                if (backpack != null) sources.Add(backpack);
                 for (int s = order.Count - 1; s > d; s--) sources.Add(order[s].Inv);
 
                 foreach (Inventory src in sources)
@@ -943,10 +1019,11 @@ namespace StorageMaster.UI
             return false;
         }
 
-        private static int TotalEverywhere(string name, bool includeMe)
+        private static int TotalEverywhere(string name, bool includeMe, Inventory backpack)
         {
             int total = Usable.Sum(c => c.Inv.CountItems(name));
             if (includeMe) total += Player.m_localPlayer.GetInventory().CountItems(name);
+            if (backpack != null) total += backpack.CountItems(name);
             return total;
         }
 
@@ -1021,7 +1098,8 @@ namespace StorageMaster.UI
             _selName.text = Localization.instance.Localize(_selected);
             int inChests = Ready.Sum(c => c.Inv.CountItems(_selected));
             int chests = Ready.Count(c => c.Inv.CountItems(_selected) > 0);
-            int onMe = Player.m_localPlayer.GetInventory().CountItems(_selected);
+            Inventory backpack = AdventureBackpacksCompat.Backpack(Player.m_localPlayer);
+            int onMe = Player.m_localPlayer.GetInventory().CountItems(_selected) + (backpack?.CountItems(_selected) ?? 0);
             _selInfo.text = $"{inChests} in {chests} chest{(chests == 1 ? "" : "s")}, {onMe} on you.\nClick <color=#ffa13c>Gather here</color> on a chest to bring them together.";
             if (!Plugin.StorageShowInventory.Value)
             {
@@ -1032,6 +1110,10 @@ namespace StorageMaster.UI
         private static ItemDrop.ItemData FindSample(string name)
         {
             foreach (ItemDrop.ItemData i in Player.m_localPlayer.GetInventory().GetAllItems()) if (i.m_shared.m_name == name) return i;
+            Inventory backpack = AdventureBackpacksCompat.Backpack(Player.m_localPlayer);
+            if (backpack != null)
+                foreach (ItemDrop.ItemData i in backpack.GetAllItems())
+                    if (i.m_shared.m_name == name) return i;
             foreach (Card c in Ready)
                 foreach (ItemDrop.ItemData i in c.Inv.GetAllItems())
                     if (i.m_shared.m_name == name) return i;
@@ -1088,7 +1170,7 @@ namespace StorageMaster.UI
                 if (!IsOpen) return;
                 InventoryElement element = __instance.GetComponentInParent<InventoryElement>();
                 InventoryGrid grid = element != null ? element.GetComponentInParent<InventoryGrid>() : null;
-                if (grid == null || grid.m_inventory == null || (grid != _playerGrid && !_cards.Any(c => c.Grid == grid))) return;
+                if (grid == null || grid.m_inventory == null || (grid != _playerGrid && grid != _backpackGrid && !_cards.Any(c => c.Grid == grid))) return;
                 ItemDrop.ItemData item = grid.m_inventory.GetItemAt(element.Position.x, element.Position.y);
                 if (item == null) return;
                 __instance.m_topic = item.m_shared.m_name;

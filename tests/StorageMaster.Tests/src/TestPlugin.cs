@@ -152,10 +152,10 @@ namespace StorageMaster.Tests
             TestKit.Put(TestKit.Mine, "Wood", 20, 0, 1);
             TestKit.Put(TestKit.Mine, "Stone", 15, 1, 1);
 
-            // With Adventure Backpacks: a backpack on your back, with items the chests hold.
+            // With Adventure Backpacks: a backpack on your back (a big one, 7 x 4), with items the chests hold.
             if (AdventureBackpacksCompat.Active)
             {
-                ItemDrop.ItemData backpackItem = TestKit.Put(TestKit.Mine, "BackpackMeadows", 1, 7, 3);
+                ItemDrop.ItemData backpackItem = TestKit.Put(TestKit.Mine, "BackpackMistlands", 1, 7, 3, quality: 4);
                 TestKit.Me.EquipItem(backpackItem);
                 yield return null;
                 Inventory backpack = AdventureBackpacksCompat.Backpack(TestKit.Me);

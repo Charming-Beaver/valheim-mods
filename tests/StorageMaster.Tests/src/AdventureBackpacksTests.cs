@@ -1,7 +1,9 @@
 using System;
 using System.Collections;
+using System.Linq;
 using System.Reflection;
 using BepInEx.Bootstrap;
+using StorageMaster.UI;
 using static StorageMaster.Tests.TestKit;
 
 namespace StorageMaster.Tests
@@ -149,19 +151,178 @@ namespace StorageMaster.Tests
             Assert.True(!InventoryButtons._backpackQuickStack.gameObject.activeSelf, "No backpack Quick stack next to a chest");
         }
 
+        // ------------------------------------------------------------------ Storage window (#60)
+
+        [Test, RequiresMod(AdventureBackpacksCompat.Guid)]
+        private static IEnumerator StorageWindowShowsTheBackpackUnderTheInventory()
+        {
+            Inventory backpack = WearBackpack();
+            Put(backpack, "Resin", 6, 1, 0);
+            SpawnChest();
+            yield return OpenStorageWindow();
+
+            InventoryGrid grid = StorageWindow._backpackGrid;
+            Assert.True(grid.gameObject.activeInHierarchy, "The backpack is shown");
+            Assert.True(grid.GetInventory() == backpack, "It shows the backpack's items");
+            Assert.Equal(3, grid.m_elements.Count, "Slots shown");
+            Assert.Equal(Localization.instance.Localize(backpack.GetName()), StorageWindow._backpackTitle.text, "Heading");
+            UnityEngine.RectTransform mine = (UnityEngine.RectTransform)StorageWindow._playerGrid.transform;
+            UnityEngine.RectTransform its = (UnityEngine.RectTransform)grid.transform;
+            Assert.True(its.anchoredPosition.y < mine.anchoredPosition.y - mine.rect.height * mine.localScale.y, "It's under the inventory");
+            Assert.Equal(1f, mine.localScale.x, "The inventory keeps its size");
+            yield return Screenshot("storage-window-backpack");
+
+            // Taking it off hides it.
+            Me.UnequipItem(Mine.GetAllItems().First(i => i.m_dropPrefab?.name == BackpackPrefab));
+            yield return Frames(3);
+            Assert.True(!grid.gameObject.activeInHierarchy, "No backpack shown without one on");
+        }
+
+        /// <summary>A big backpack under the inventory: both keep their size and the area scrolls.</summary>
+        [Test, RequiresMod(AdventureBackpacksCompat.Guid)]
+        private static IEnumerator StorageWindowScrollsForABigBackpack()
+        {
+            Inventory backpack = WearBackpack("BackpackMistlands", 4, 7, 4);
+            Put(backpack, "Resin", 6, 6, 3);
+            yield return OpenStorageWindow();
+
+            UnityEngine.RectTransform content = StorageWindow._playerContent;
+            UnityEngine.UI.ScrollRect scroll = content.GetComponentInParent<UnityEngine.UI.ScrollRect>();
+            float view = scroll.viewport.rect.height;
+            Assert.Equal(1f, StorageWindow._playerGrid.transform.localScale.x, "Inventory scale");
+            Assert.Equal(1f, StorageWindow._backpackGrid.transform.localScale.x, "Backpack scale");
+            if (content.rect.height > view + 1f)
+            {
+                Assert.True(scroll.verticalScrollbar.gameObject.activeInHierarchy, $"Scroll bar shown (content {content.rect.height:0}, view {view:0})");
+                scroll.verticalNormalizedPosition = 0f;
+                yield return Frames(2);
+            }
+            else
+            {
+                TestPlugin.Log.LogInfo($"The screen is tall enough for inventory and backpack (content {content.rect.height:0}, view {view:0}); nothing to scroll");
+            }
+            yield return Screenshot("storage-window-big-backpack");
+        }
+
+        /// <summary>
+        /// Ctrl + click: an inventory item goes into a chest, not the backpack; a backpack item goes into a chest; a chest
+        /// item goes into the inventory.
+        /// </summary>
+        [Test, RequiresMod(AdventureBackpacksCompat.Guid)]
+        private static IEnumerator CtrlClickSkipsTheBackpack()
+        {
+            Inventory backpack = WearBackpack();
+            Container chest = SpawnChest();
+            Inventory inv = chest.GetInventory();
+            Put(inv, "Stone", 5, 0, 0);
+            ItemDrop.ItemData mineWood = Put(Mine, "Wood", 10, 2, 2);
+            ItemDrop.ItemData backpackResin = Put(backpack, "Resin", 6, 1, 0);
+            yield return OpenStorageWindow();
+
+            StorageWindow.QuickMove(Mine, mineWood);
+            Assert.Equal(10, Count(inv, "Wood"), "Wood from the inventory in the chest");
+            Assert.Equal(0, Count(backpack, "Wood"), "Wood in the backpack");
+
+            StorageWindow.QuickMove(backpack, backpackResin);
+            Assert.Equal(6, Count(inv, "Resin"), "Resin from the backpack in the chest");
+            Assert.Equal(0, Count(backpack, "Resin"), "Resin left in the backpack");
+
+            StorageWindow.QuickMove(inv, inv.GetAllItems().First(i => i.m_shared.m_name == Name("Stone")));
+            Assert.Equal(5, Count(Mine, "Stone"), "Stone from the chest in the inventory");
+            Assert.Equal(0, Count(backpack, "Stone"), "Stone in the backpack");
+        }
+
+        [Test, RequiresMod(AdventureBackpacksCompat.Guid)]
+        private static IEnumerator StorageWindowDragsBetweenBackpackAndChest()
+        {
+            Inventory backpack = WearBackpack();
+            Container chest = SpawnChest();
+            Put(backpack, "Resin", 6, 0, 0);
+            yield return OpenStorageWindow();
+
+            InventoryGrid backpackGrid = StorageWindow._backpackGrid;
+            InventoryGrid chestGrid = StorageWindow._cards.First(c => c.Chest == chest).Grid;
+            StorageWindow.OnSelected(backpackGrid, backpack.GetItemAt(0, 0), new Vector2i(0, 0), InventoryGrid.Modifier.Select);
+            StorageWindow.OnSelected(chestGrid, null, new Vector2i(2, 1), InventoryGrid.Modifier.Select);
+            Assert.Equal(6, Count(chest.GetInventory(), "Resin"), "Resin dropped into the chest");
+            Assert.Equal(0, Count(backpack, "Resin"), "Resin left in the backpack");
+
+            StorageWindow.OnSelected(chestGrid, chest.GetInventory().GetItemAt(2, 1), new Vector2i(2, 1), InventoryGrid.Modifier.Select);
+            StorageWindow.OnSelected(backpackGrid, null, new Vector2i(2, 0), InventoryGrid.Modifier.Select);
+            Assert.Equal(6, Count(backpack, "Resin"), "Resin back in the backpack");
+            Assert.True(backpack.GetItemAt(2, 0) != null, "In the slot it was dropped on");
+        }
+
+        /// <summary>Find item counts what's in the backpack as on you; Tidy up and Sort all leave the backpack alone.</summary>
+        [Test, RequiresMod(AdventureBackpacksCompat.Guid)]
+        private static IEnumerator FindCountsTheBackpackAndTidyUpLeavesItAlone()
+        {
+            Inventory backpack = WearBackpack();
+            Container a = SpawnChest(3f, 0f);
+            Container b = SpawnChest(3f, 90f);
+            Put(a.GetInventory(), "Resin", 5, 0, 0);
+            Put(b.GetInventory(), "Resin", 3, 0, 0);
+            Put(backpack, "Wood", 4, 0, 0);
+            Put(backpack, "Resin", 6, 2, 0);
+            Put(Mine, "Resin", 2, 2, 2);
+            yield return OpenStorageWindow();
+
+            StorageWindow._selected = Name("Resin");
+            yield return Frames(2);
+            Assert.True(StorageWindow._selInfo.text.StartsWith("8 in 2 chests, 8 on you"), $"Selection info: \"{StorageWindow._selInfo.text}\"");
+
+            StorageWindow.TidyUp();
+            StorageWindow.SortAll();
+            Assert.Equal("Wood x4 @0,0, Resin x6 @2,0", Describe(backpack), "Backpack after Tidy up and Sort all");
+        }
+
+        /// <summary>Gather here takes from the backpack only when "Also gather from my backpack" is ticked.</summary>
+        [Test, RequiresMod(AdventureBackpacksCompat.Guid)]
+        private static IEnumerator GatherHereFromTheBackpackWhenTicked()
+        {
+            Inventory backpack = WearBackpack();
+            Container chest = SpawnChest();
+            Put(chest.GetInventory(), "Resin", 5, 0, 0);
+            Put(backpack, "Resin", 6, 1, 0);
+            Put(Mine, "Resin", 2, 2, 2);
+            yield return OpenStorageWindow();
+            Assert.True(StorageWindow._includeBackpack.gameObject.activeInHierarchy && StorageWindow._includeBackpack.interactable, "The backpack checkbox is shown");
+            StorageWindow._selected = Name("Resin");
+            StorageWindow._includeMe.isOn = false;
+            StorageWindow.Card card = StorageWindow._cards.First(c => c.Chest == chest);
+
+            StorageWindow._includeBackpack.isOn = false;
+            StorageWindow.GatherInto(card);
+            Assert.Equal(6, Count(backpack, "Resin"), "Resin stays in the backpack when not ticked");
+
+            StorageWindow._includeBackpack.isOn = true;
+            yield return Screenshot("storage-window-gather-from-backpack");
+            StorageWindow.GatherInto(card);
+            Assert.Equal(11, Count(chest.GetInventory(), "Resin"), "Resin from the backpack gathered");
+            Assert.Equal(0, Count(backpack, "Resin"), "Resin left in the backpack");
+            Assert.Equal(2, Count(Mine, "Resin"), "Resin stays in the inventory (its box isn't ticked)");
+        }
+
         // ------------------------------------------------------------------ helpers
 
-        /// <summary>Puts on a backpack and returns its inventory.</summary>
-        private static Inventory WearBackpack()
+        /// <summary>Puts on a backpack and returns its inventory. A new Meadows backpack has a single row of 3 slots.</summary>
+        private static Inventory WearBackpack(string prefab = BackpackPrefab, int quality = 1, int width = 3, int height = 1)
         {
-            ItemDrop.ItemData item = Put(Mine, BackpackPrefab, 1, 7, 3);
+            ItemDrop.ItemData item = Put(Mine, prefab, 1, 7, 3, quality);
             Assert.True(Me.EquipItem(item), "Backpack equipped");
             Inventory backpack = AdventureBackpacksCompat.Backpack(Me);
             Assert.True(backpack != null, "The equipped backpack has an inventory");
-            // A new Meadows backpack has a single row of 3 slots.
-            Assert.True(backpack.GetWidth() >= 3, $"The backpack has 3 slots in a row (it's {backpack.GetWidth()} x {backpack.GetHeight()})");
+            Assert.True(backpack.GetWidth() == width && backpack.GetHeight() == height,
+                $"The backpack is {width} x {height} (it's {backpack.GetWidth()} x {backpack.GetHeight()})");
             backpack.RemoveAll();
             return backpack;
+        }
+
+        private static IEnumerator OpenStorageWindow()
+        {
+            StorageWindow.Open();
+            yield return WaitUntil(() => StorageWindow._cards.All(c => c.Claimed), "every chest in the window to open");
+            yield return Frames(3);
         }
 
         private static void OpenBackpack(InventoryGui gui)
