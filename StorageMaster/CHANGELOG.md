@@ -13,6 +13,7 @@
 - With Quick Stack Store Sort Trash Restock, opening the Storage window, Quick stack and Gather here no longer quick stack your inventory into the chests
 - With SeneaL UI, Quick stack and Place stacks keep your hotbar and locked slots again, both Storage Master's and SeneaL UI's, and Quick stack counts only the items it moved
 - With SeneaL UI, Sort and auto-sort leave its equipment and quick slots alone and no longer put items in slots it doesn't let you use, and the Storage window shows only your regular inventory rows
+- With SeneaL UI, Alt + click locks a slot only once, with SeneaL UI's lock: Sort, Quick stack and the Storage window keep SeneaL UI's locked slots, and slots you locked with Storage Master before become SeneaL UI's locks
 
 ## 1.2.0
 
