@@ -10,6 +10,7 @@
 - The Storage window opens right away and fills in nearest chest first, instead of freezing the game for a moment in bases with many chests
 
 ### Fixed
+- With SeneaL UI, chests can be named in the chest window: the name field sits over SeneaL UI's chest title instead of the game's hidden one
 - With Quick Stack Store Sort Trash Restock, opening the Storage window, Quick stack and Gather here no longer quick stack your inventory into the chests
 - With SeneaL UI, Quick stack and Place stacks keep your hotbar and locked slots again, both Storage Master's and SeneaL UI's, and Quick stack counts only the items it moved
 - With SeneaL UI, Sort and auto-sort leave its equipment and quick slots alone and no longer put items in slots it doesn't let you use, and the Storage window shows only your regular inventory rows
