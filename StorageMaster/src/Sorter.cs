@@ -73,9 +73,10 @@ namespace StorageMaster
             items.Sort(Compare);
             int width = inventory.GetWidth();
             for (int i = 0; i < items.Count; i++) items[i].m_gridPos = new Vector2i(i % width, i / width);
-            // Changed() makes the chest save itself, which shares the new order with other players.
+            // Changed() makes the chest save itself, which shares the new order with other players
+            // (and Adventure Backpacks save the backpack).
             inventory.Changed();
-            if (!silent) Report("Chest", merged);
+            if (!silent) Report(AdventureBackpacksCompat.IsBackpack(container) ? "Backpack" : "Chest", merged);
         }
 
         private static bool IsDragging(bool silent)

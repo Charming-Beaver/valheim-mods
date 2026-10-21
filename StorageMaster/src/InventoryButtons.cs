@@ -15,6 +15,7 @@ namespace StorageMaster
 
         private static Button _sort, _mode, _quickStack, _autoSort, _storage, _info, _options, _sortChest, _chestMode;
         private static Badge _badge, _chestBadge;
+        private static bool _sortChestIsBackpack;
 
         public static void Ensure()
         {
@@ -25,7 +26,11 @@ namespace StorageMaster
                 if (InventoryGui.IsVisible())
                 {
                     _badge.Apply();
-                    if (_chestBadge != null && _chestBadge.gameObject.activeInHierarchy) _chestBadge.Apply();
+                    if (_chestBadge != null && _chestBadge.gameObject.activeInHierarchy)
+                    {
+                        _chestBadge.Apply();
+                        SetSortChestLabel(AdventureBackpacksCompat.IsBackpack(gui.m_currentContainer));
+                    }
                 }
                 return;
             }
@@ -51,11 +56,20 @@ namespace StorageMaster
                 RectTransform chestMenu = Menu("StorageMaster_ChestMenu", 2);
                 _sortChest = Make(chestMenu, "Sort chest", () => Sorter.SortContainer(gui.m_currentContainer), 0,
                     "Sorts this chest (merging partial stacks) using the same order as your inventory.");
+                _sortChestIsBackpack = false;
                 _chestMode = Make(chestMenu, "", Sorter.CycleMode, 1, "Click to change what Sort and Sort chest order by.");
                 _chestBadge = Badge.Create(gui.m_container, BoxOf(gui.m_container, gui.m_containerWeight), "StorageMaster_ChestBadge", chestMenu,
                     Plugin.ChestMenuOpen, Plugin.ChestBadgeX, Plugin.ChestBadgeY);
             }
             Refresh();
+        }
+
+        /// <summary>Adventure Backpacks opens the backpack in the chest panel, where Sort chest sorts it (#6).</summary>
+        private static void SetSortChestLabel(bool backpack)
+        {
+            if (_sortChest == null || backpack == _sortChestIsBackpack) return;
+            _sortChestIsBackpack = backpack;
+            _sortChest.SetLabel(backpack ? "Sort backpack" : "Sort chest");
         }
 
         /// <summary>The box around a text, i.e. its ancestor that sits directly in the panel (or the text's parent if none does).</summary>
