@@ -78,6 +78,13 @@ namespace StorageMaster.Tests
             yield return null;
         }
 
+        /// <summary>Removes a chest spawned by the test, as if it was destroyed in the game.</summary>
+        public static void RemoveChest(Container c)
+        {
+            _chests.Remove(c);
+            Destroy(c);
+        }
+
         private static void Destroy(Container c)
         {
             if (c == null || c.m_nview == null || !c.m_nview.IsValid()) return;

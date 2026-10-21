@@ -32,6 +32,8 @@ namespace StorageMaster.UI
             public TextMeshProUGUI Distance;
             public Image Background;
             public Button Gather;
+            public Toggle Skip;
+            public Vector2i Size;
             public float W, H;
             public bool Claimed;
             public bool Denied;
@@ -55,7 +57,12 @@ namespace StorageMaster.UI
         private static RectTransform _cardList;
         private static RectTransform _playerArea;
         private static InventoryGrid _playerGrid;
+        // Nearest first. A card without a Root is still waiting to be built (see BuildSome).
         private static readonly List<Card> _cards = new List<Card>();
+        // Cards of closed chests, hidden and kept for the next chest of the same size: building one is the slow part.
+        private static readonly List<Card> _pool = new List<Card>();
+        // Building cards stops for the frame after this long, so opening with many chests doesn't freeze the game (#16).
+        private const double BuildBudgetMs = 6;
         private static TMP_InputField _search;
         private static Image _selIcon;
         private static TextMeshProUGUI _selName, _selInfo, _summary;
@@ -125,18 +132,61 @@ namespace StorageMaster.UI
             List<Container> chests = ChestAccess.FindNearby(Plugin.StorageRange.Value);
             int overLimit = Mathf.Max(0, chests.Count - Plugin.StorageMaxChests.Value);
             if (overLimit > 0) chests.RemoveRange(Plugin.StorageMaxChests.Value, overLimit);
-            foreach (Container chest in chests)
-            {
-                Card card = BuildCard(chest);
-                _cards.Add(card);
-                ChestAccess.Request(chest, granted => OnAnswer(card, granted));
-            }
+            foreach (Container chest in chests) _cards.Add(new Card { Chest = chest });
             _summaryBase = chests.Count == 0
                 ? $"No chests within {Plugin.StorageRange.Value:0} m that you can open."
                 : $"{chests.Count} chest{(chests.Count == 1 ? "" : "s")} within {Plugin.StorageRange.Value:0} m";
             // Only the nearest ones are opened; say so, or the rest silently don't take part in tidying up and gathering.
             if (overLimit > 0) _summaryBase += $"  <color=#ffa13c>{overLimit} more over the Max chests limit (Settings)</color>";
-            LayoutCards();
+            BuildSome();
+        }
+
+        /// <summary>
+        /// Builds the cards still waiting, nearest first, and asks for their chests, until the frame's budget is used up;
+        /// the rest follow in the next frames. Until then those chests count as "still opening".
+        /// </summary>
+        private static void BuildSome()
+        {
+            var watch = System.Diagnostics.Stopwatch.StartNew();
+            bool built = false;
+            for (int i = 0; i < _cards.Count && watch.Elapsed.TotalMilliseconds < BuildBudgetMs; i++)
+            {
+                if (_cards[i].Root != null) continue;
+                Card card = TakeCard(_cards[i].Chest);
+                _cards[i] = card;
+                built = true;
+                ChestAccess.Request(card.Chest, granted => OnAnswer(card, granted));
+            }
+            if (built) LayoutCards();
+        }
+
+        /// <summary>A card for the chest: a hidden one of the same size if there is one, otherwise a new one.</summary>
+        private static Card TakeCard(Container chest)
+        {
+            Inventory inv = chest.GetInventory();
+            var size = new Vector2i(inv.GetWidth(), inv.GetHeight());
+            int pooled = _pool.FindIndex(c => c.Size == size);
+            Card card;
+            if (pooled >= 0)
+            {
+                card = _pool[pooled];
+                _pool.RemoveAt(pooled);
+            }
+            else
+            {
+                card = BuildCard(size);
+            }
+            Bind(card, chest);
+            return card;
+        }
+
+        /// <summary>Hides a card and keeps it for the next chest of the same size.</summary>
+        private static void Recycle(Card card)
+        {
+            if (card.Root == null) return;
+            card.Root.gameObject.SetActive(false);
+            card.Chest = null;
+            _pool.Add(card);
         }
 
         private static void OnAnswer(Card card, bool granted)
@@ -157,9 +207,12 @@ namespace StorageMaster.UI
 
         private static void ReleaseAll()
         {
-            foreach (Card card in _cards) Release(card);
+            foreach (Card card in _cards)
+            {
+                Release(card);
+                Recycle(card);
+            }
             _cards.Clear();
-            if (_cardList != null) UIKit.Clear(_cardList);
         }
 
         private static void Release(Card card)
@@ -216,15 +269,17 @@ namespace StorageMaster.UI
                 {
                     if (_heldInv != null && !gone && _heldInv == card.Inv) ClearHeld();
                     Release(card);
-                    if (card.Root != null) UnityEngine.Object.Destroy(card.Root.gameObject);
+                    Recycle(card);
                     _cards.RemoveAt(i);
                     removed = true;
                     continue;
                 }
+                if (card.Root == null) continue;
                 card.Distance.text = $"{dist:0} m";
                 card.ResetName.gameObject.SetActive(card.Claimed && ChestAccess.GetLabel(card.Chest).Length > 0);
             }
             if (removed) LayoutCards();
+            BuildSome();
 
             if (_heldItem != null && (_heldInv == null || !_heldInv.ContainsItem(_heldItem))) ClearHeld();
 
@@ -262,6 +317,8 @@ namespace StorageMaster.UI
 
         private static void Build()
         {
+            // The hidden cards went with the old window.
+            _pool.Clear();
             // The window fills the screen, so as many chests as possible fit side by side.
             _builtFor = CanvasSize();
             W = Mathf.Max(1000f, _builtFor.x - 60f);
@@ -480,12 +537,12 @@ namespace StorageMaster.UI
 
         private static void Place(Component c, float x, float y, float w, float h) => ((RectTransform)c.transform).TopLeft(x, y, w, h);
 
-        private static Card BuildCard(Container chest)
+        /// <summary>A card for chests with this many slots; <see cref="Bind"/> puts a chest in it.</summary>
+        private static Card BuildCard(Vector2i size)
         {
-            Inventory inv = chest.GetInventory();
-            float gridW = inv.GetWidth() * Space;
-            float gridH = inv.GetHeight() * Space;
-            var card = new Card { Chest = chest };
+            float gridW = size.x * Space;
+            float gridH = size.y * Space;
+            var card = new Card { Size = size };
             card.W = Mathf.Max(MinCardW, gridW + 2 * CardPad);
             card.H = CardHeader + gridH + CardPad;
             float inner = card.W - 2 * CardPad;
@@ -494,7 +551,7 @@ namespace StorageMaster.UI
             card.Background = card.Root.gameObject.AddComponent<Image>();
 
             // First line: name, distance and the Skip box.
-            card.Label = UIKit.InputField(card.Root, Localization.instance.Localize(chest.m_name), inner - 190, 34, plain: true);
+            card.Label = UIKit.InputField(card.Root, "", inner - 190, 34, plain: true);
             Place(card.Label.transform, CardPad, 8, inner - 190, 34);
             card.ResetName = UIKit.Button(card.Root, "X", () =>
             {
@@ -511,13 +568,13 @@ namespace StorageMaster.UI
             card.Distance = UIKit.Text(card.Root, "", 15, UIKit.Grey, TextAlignmentOptions.Center);
             card.Distance.rectTransform.TopLeft(CardPad + inner - 144, 8, 52, 34);
 
-            Toggle skip = UIKit.Check(card.Root, "Skip", Exclusions.IsExcluded(chest), v =>
+            card.Skip = UIKit.Check(card.Root, "Skip", false, v =>
             {
                 Exclusions.Set(card.Chest, v);
                 RefreshCardLook(card);
             }, 84);
-            ((RectTransform)skip.transform).TopLeft(card.W - CardPad - 84, 12, 84, 26);
-            UIKit.Tooltip(skip.gameObject,
+            ((RectTransform)card.Skip.transform).TopLeft(card.W - CardPad - 84, 12, 84, 26);
+            UIKit.Tooltip(card.Skip.gameObject,
                 "Leave this chest alone: Quick stack, Gather here, Tidy up and Sort all won't put anything in or take anything out " +
                 "(handy for your friend's chests). You can still move items by hand. Only affects you.");
 
@@ -533,12 +590,31 @@ namespace StorageMaster.UI
             RectTransform gridArea = UIKit.Rect(card.Root, "grid").TopLeft((card.W - gridW) / 2f, CardHeader, gridW, gridH);
             card.Grid = MakeGrid(gridArea);
             ((RectTransform)card.Grid.transform).TopLeft(0, 0, gridW, gridH);
-            card.Grid.gameObject.SetActive(false);
 
-            card.Status = UIKit.Text(card.Root, "Opening...", 18, UIKit.Grey, TextAlignmentOptions.Center);
+            card.Status = UIKit.Text(card.Root, "", 18, UIKit.Grey, TextAlignmentOptions.Center);
             card.Status.rectTransform.Anchor(0, 0, 1, 1, CardPad, CardPad, CardPad, CardHeader);
-            RefreshCardLook(card);
             return card;
+        }
+
+        /// <summary>Shows a chest on a card, new or reused, as "Opening..." until the chest answers.</summary>
+        private static void Bind(Card card, Container chest)
+        {
+            card.Chest = chest;
+            card.Claimed = false;
+            card.Denied = false;
+            ((TMP_Text)card.Label.placeholder).text = Localization.instance.Localize(chest.m_name);
+            card.Label.SetTextWithoutNotify("");
+            card.ResetName.gameObject.SetActive(false);
+            card.Distance.text = "";
+            card.Skip.SetIsOnWithoutNotify(Exclusions.IsExcluded(chest));
+            card.Status.text = "Opening...";
+            card.Status.gameObject.SetActive(true);
+            // The grid makes its slots the first time it shows an inventory of its size, which is slow; a reused card
+            // already has them.
+            card.Grid.UpdateInventory(chest.GetInventory(), null, null);
+            card.Grid.gameObject.SetActive(false);
+            RefreshCardLook(card);
+            card.Root.gameObject.SetActive(true);
         }
 
         private static void RefreshCardLook(Card card)

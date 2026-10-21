@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+### Changed
+- The Storage window opens right away and fills in nearest chest first, instead of freezing the game for a moment in bases with many chests
+
 ### Fixed
 - With Quick Stack Store Sort Trash Restock, opening the Storage window, Quick stack and Gather here no longer quick stack your inventory into the chests
 - With SeneaL UI, Quick stack and Place stacks keep your hotbar and locked slots again, both Storage Master's and SeneaL UI's, and Quick stack counts only the items it moved
