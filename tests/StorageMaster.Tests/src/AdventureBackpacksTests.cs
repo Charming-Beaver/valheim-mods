@@ -91,6 +91,7 @@ namespace StorageMaster.Tests
             Assert.True(InventoryButtons._quickStack.gameObject.activeInHierarchy, "Quick stack is shown with the backpack open");
             Assert.True(InventoryButtons._sortChest.gameObject.activeInHierarchy, "Sort is shown next to the backpack");
             Assert.Equal("Sort backpack", InventoryButtons._sortChest.GetComponentInChildren<TMPro.TMP_Text>().text, "Label of the backpack's Sort button");
+            Assert.True(!InventoryButtons._backpackQuickStack.gameObject.activeSelf, "No Quick stack of its own: the inventory's takes the backpack along");
             yield return Screenshot("adventure-backpacks-open");
 
             InventoryButtons._sortChest.onClick.Invoke();
@@ -108,6 +109,44 @@ namespace StorageMaster.Tests
             yield return WaitUntil(() => gui.m_currentContainer == chest, "the chest to open");
             yield return Frames(3);
             Assert.Equal("Sort chest", InventoryButtons._sortChest.GetComponentInChildren<TMPro.TMP_Text>().text, "Label of the chest's Sort button");
+        }
+
+        /// <summary>With the backpack left out of Quick stack, the open backpack gets a Quick stack that moves only its items.</summary>
+        [Test, RequiresMod(AdventureBackpacksCompat.Guid)]
+        private static IEnumerator OpenBackpackHasItsOwnQuickStackWhenLeftOut()
+        {
+            Plugin.QuickStackIncludesBackpack.Value = false;
+            Inventory backpack = WearBackpack();
+            Container chest = SpawnChest();
+            Put(chest.GetInventory(), "Wood", 1, 0, 0);
+            Put(backpack, "Wood", 20, 0, 0);
+            Put(Mine, "Wood", 5, 2, 2);
+            InventoryGui gui = InventoryGui.instance;
+            gui.Show(null);
+            yield return InventorySettled();
+            OpenBackpack(gui);
+            yield return WaitUntil(() => gui.m_currentContainer != null && gui.IsContainerOpen(), "the backpack to open");
+            yield return Frames(3);
+
+            Assert.True(InventoryButtons._backpackQuickStack.gameObject.activeInHierarchy, "The backpack's menu has a Quick stack");
+            UnityEngine.RectTransform button = (UnityEngine.RectTransform)InventoryButtons._backpackQuickStack.transform;
+            float bottom = -button.anchoredPosition.y + button.rect.height;
+            Assert.True(bottom <= InventoryButtons._chestMenu.rect.height,
+                $"The menu ({InventoryButtons._chestMenu.rect.height:0}) is tall enough for the third button (bottom at {bottom:0})");
+            yield return Screenshot("adventure-backpacks-own-quick-stack");
+
+            InventoryButtons._backpackQuickStack.onClick.Invoke();
+            yield return WaitUntil(() => Count(chest.GetInventory(), "Wood") == 21, "21 wood in the chest");
+            yield return WaitUntil(() => QuickStack._reportAt < 0f, "the quick stack summary");
+            Assert.Equal(0, Count(backpack, "Wood"), "Wood left in the backpack");
+            Assert.Equal(5, Count(Mine, "Wood"), "Wood stays in the inventory");
+
+            // Back to a real chest: no backpack Quick stack there.
+            gui.CloseContainer();
+            gui.Show(chest);
+            yield return WaitUntil(() => gui.m_currentContainer == chest, "the chest to open");
+            yield return Frames(3);
+            Assert.True(!InventoryButtons._backpackQuickStack.gameObject.activeSelf, "No backpack Quick stack next to a chest");
         }
 
         // ------------------------------------------------------------------ helpers

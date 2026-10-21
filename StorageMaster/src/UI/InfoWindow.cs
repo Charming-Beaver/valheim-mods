@@ -41,7 +41,7 @@ namespace StorageMaster.UI
             Section(c, "Quick stack");
             Para(c, "<color=#ffa13c>Quick stack</color> puts your items into nearby chests that already hold the same kind of item. " +
                     "Your hotbar, equipped items and locked slots stay with you, and chests marked Skip in the Storage window are left out. " +
-                    (AdventureBackpacksCompat.Active ? "Items in the backpack you're wearing go too, unless you turn that off in Options. " : "") +
+                    (AdventureBackpacksCompat.Active ? "Items in the backpack you're wearing go too. If you turn that off in Options, the open backpack gets a Quick stack of its own. " : "") +
                     "Each chest is handed over by whoever controls it first, so it's safe while your friend plays, and a chest they have open is skipped.");
 
             Section(c, "Storage window");
