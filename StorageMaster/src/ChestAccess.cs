@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Reflection;
 using HarmonyLib;
 using UnityEngine;
 
@@ -17,10 +19,54 @@ namespace StorageMaster
 
         private static readonly Dictionary<Container, Action<bool>> _waiting = new Dictionary<Container, Action<bool>>();
 
+        // The chest whose answer we're handling right now; other mods' hooks on the answer are skipped meanwhile.
+        private static Container _answering;
+        private static bool _othersMuted;
+
         public static void Request(Container c, Action<bool> onAnswer)
         {
+            MuteOthers();
             _waiting[c] = onAnswer;
             c.StackAll();
+        }
+
+        /// <summary>
+        /// Some mods replace the answer to "Place stacks" with their own quick stack (Quick Stack Store Sort Trash Restock
+        /// does). Harmony runs every prefix even when ours already skipped the game's code, so their quick stack would run
+        /// into every chest we take over. Done on the first request, when all mods have patched the game.
+        /// </summary>
+        private static void MuteOthers()
+        {
+            if (_othersMuted) return;
+            _othersMuted = true;
+            MethodInfo answer = AccessTools.Method(typeof(Container), nameof(Container.RPC_StackResponse));
+            HarmonyLib.Patches patches = Harmony.GetPatchInfo(answer);
+            if (patches == null) return;
+            var harmony = new Harmony(Plugin.Guid);
+            foreach (Patch p in patches.Prefixes.Concat(patches.Postfixes))
+            {
+                if (p.owner == Plugin.Guid) continue;
+                MethodInfo method = p.PatchMethod;
+                string skip = method.ReturnType == typeof(bool) ? nameof(SkipBoolWhileAnswering) : nameof(SkipWhileAnswering);
+                try
+                {
+                    harmony.Patch(method, prefix: new HarmonyMethod(typeof(ChestAccess), skip));
+                    Debug.Log($"[Storage Master] {p.owner} also handles \"Place stacks\" answers; it's skipped for the chests Storage Master opens.");
+                }
+                catch (Exception e)
+                {
+                    Debug.LogWarning($"[Storage Master] Couldn't keep {p.owner} from handling the chests Storage Master opens: {e.Message}");
+                }
+            }
+        }
+
+        private static bool SkipWhileAnswering() => _answering == null;
+
+        private static bool SkipBoolWhileAnswering(ref bool __result)
+        {
+            if (_answering == null) return true;
+            __result = false; // A prefix returning false: the game's code is skipped, as ours does anyway.
+            return false;
         }
 
         public static void Forget(Container c) => _waiting.Remove(c);
@@ -64,14 +110,20 @@ namespace StorageMaster
         [HarmonyPatch]
         private static class Patches
         {
-            [HarmonyPatch(typeof(Container), nameof(Container.RPC_StackResponse)), HarmonyPrefix]
+            // First, so _answering is set before other mods' prefixes run. A finalizer clears it after all postfixes,
+            // even when something throws.
+            [HarmonyPatch(typeof(Container), nameof(Container.RPC_StackResponse)), HarmonyPrefix, HarmonyPriority(Priority.First)]
             private static bool StackResponse(Container __instance, bool granted)
             {
                 if (!_waiting.TryGetValue(__instance, out Action<bool> onAnswer)) return true;
                 _waiting.Remove(__instance);
+                _answering = __instance;
                 onAnswer(granted);
                 return false;
             }
+
+            [HarmonyPatch(typeof(Container), nameof(Container.RPC_StackResponse)), HarmonyFinalizer]
+            private static void StackResponseDone() => _answering = null;
 
             // Named chests show their name when you look at them.
             [HarmonyPatch(typeof(Container), nameof(Container.GetHoverText)), HarmonyPostfix]
