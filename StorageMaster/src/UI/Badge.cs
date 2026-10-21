@@ -6,21 +6,25 @@ using UnityEngine.UI;
 namespace StorageMaster.UI
 {
     /// <summary>
-    /// A box like the game's weight box on a panel's right edge. Clicking it opens or closes a menu of buttons next to it;
-    /// holding the drag key (Plugin.DragKey) and dragging moves it. Where it is and whether the menu is open are saved.
+    /// A box like the game's weight box on a panel's right edge (with SeneaL UI: like its pills, under its panel's bottom
+    /// left corner). Clicking it opens or closes a menu of buttons next to it; holding the drag key (Plugin.DragKey) and
+    /// dragging moves it. Where it is and whether the menu is open are saved.
     /// </summary>
     public class Badge : Button, IBeginDragHandler, IDragHandler, IEndDragHandler
     {
         private const float MenuGap = 4f;
 
         public RectTransform Menu;
-        /// <summary>Its usual place; the saved X/Y are how far it was moved from there.</summary>
-        public Vector2 Home;
+        /// <summary>The panel it belongs to: its parent, or (SeneaL UI's panels) a sibling it sits next to.</summary>
+        public RectTransform Panel;
         public ConfigEntry<bool> MenuOpen;
         public ConfigEntry<int> X, Y;
-        /// <summary>The game's boxes on the same panel (armor, weight), which are drawn over the badge.</summary>
+        /// <summary>What is drawn over the badge: the game's boxes on the same panel (armor, weight), or the panel it sits next to.</summary>
         public Transform[] Boxes;
 
+        private Vector2 _home;
+        private Vector2 _homeSize;
+        private bool _homeUnderPanel;
         private bool _moving;
         private Vector2 _grab, _live;
         private static readonly Vector3[] _corners = new Vector3[4];
@@ -28,20 +32,66 @@ namespace StorageMaster.UI
         public RectTransform Rect => (RectTransform)transform;
         private RectTransform Parent => (RectTransform)transform.parent;
 
+        /// <summary>
+        /// Its usual place; the saved X/Y are how far it was moved from there. Next to a panel, it's just under the panel's
+        /// bottom left corner, which moves with the panel's size.
+        /// </summary>
+        public Vector2 Home
+        {
+            get
+            {
+                if (!_homeUnderPanel) return _home;
+                Rect panel = PanelRect();
+                return new Vector2(panel.xMin + 16f + _homeSize.x / 2f, panel.yMin - _homeSize.y / 2f + 6f);
+            }
+        }
+
         /// <summary>Puts a badge just above <paramref name="below"/> (the panel's weight box), with the same look and size.</summary>
         public static Badge Create(RectTransform panel, RectTransform below, string name, RectTransform menu,
             ConfigEntry<bool> menuOpen, ConfigEntry<int> x, ConfigEntry<int> y, params Transform[] boxes)
         {
-            // A copy of the weight box (its frame and wooden face, with their materials and colors), so it looks the same,
-            // also when a UI mod restyles that box. Its icon, text and any scripts are removed.
-            GameObject go = Instantiate(below.gameObject, panel, false);
+            Badge badge = Make(below, panel, name, null);
+            badge.Panel = panel;
+            badge._home = below.anchoredPosition + new Vector2(0f, below.sizeDelta.y + 12f);
+            badge.Boxes = new Transform[boxes.Length + 1];
+            badge.Boxes[0] = below;
+            boxes.CopyTo(badge.Boxes, 1);
+            return badge.Finish(menu, menuOpen, x, y);
+        }
+
+        /// <summary>
+        /// Puts a badge next to another mod's panel (SeneaL UI's), tucked under its bottom left corner, with the look of
+        /// <paramref name="look"/> (one of that panel's boxes) at the given size.
+        /// </summary>
+        public static Badge CreateNextTo(RectTransform panel, RectTransform look, Vector2 size, string name, RectTransform menu,
+            ConfigEntry<bool> menuOpen, ConfigEntry<int> x, ConfigEntry<int> y)
+        {
+            Badge badge = Make(look, (RectTransform)panel.parent, name, size);
+            RectTransform rt = badge.Rect;
+            rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
+            badge.Panel = panel;
+            badge._homeUnderPanel = true;
+            badge._homeSize = size;
+            badge.Boxes = new Transform[] { panel };
+            return badge.Finish(menu, menuOpen, x, y);
+        }
+
+        private static Badge Make(RectTransform look, RectTransform parent, string name, Vector2? size)
+        {
+            // A copy of the box (the weight box's frame and wooden face, or SeneaL UI's pill, with their materials and
+            // colors), so it looks the same, also when a UI mod restyles that box. Its icon, text and any scripts are removed.
+            GameObject go = Instantiate(look.gameObject, parent, false);
             go.name = name;
+            // The box can be hidden (SeneaL UI hides the game's), the badge mustn't be.
+            go.SetActive(true);
             RectTransform rt = (RectTransform)go.transform;
             rt.pivot = new Vector2(0.5f, 0.5f);
+            if (size.HasValue) rt.sizeDelta = size.Value;
             Image face = null;
             foreach (Transform child in rt)
             {
-                if (child.name == "bkg" && face == null && child.TryGetComponent(out Image image))
+                // The wooden face is "bkg" in the game's box, SeneaL UI's pill is "bg".
+                if ((child.name == "bkg" || child.name == "bg") && face == null && child.TryGetComponent(out Image image))
                 {
                     face = image;
                     OnlyLooks(child.gameObject);
@@ -51,13 +101,14 @@ namespace StorageMaster.UI
             OnlyLooks(go);
             if (face == null) face = go.GetComponent<Image>() ?? go.AddComponent<Image>();
 
-            // Three bars: the usual sign for a menu.
+            // Three bars: the usual sign for a menu (smaller on a smaller box).
+            float scale = size.HasValue ? Mathf.Min(1f, size.Value.y / 40f) : 1f;
             for (int i = -1; i <= 1; i++)
             {
                 RectTransform bar = UIKit.Solid(rt, UIKit.Parchment, "bar").rectTransform;
                 bar.anchorMin = bar.anchorMax = new Vector2(0.5f, 0.5f);
-                bar.sizeDelta = new Vector2(30f, 4f);
-                bar.anchoredPosition = new Vector2(1f, i * 9f);
+                bar.sizeDelta = new Vector2(30f, 4f) * scale;
+                bar.anchoredPosition = new Vector2(1f, i * 9f) * scale;
             }
 
             Badge badge = rt.gameObject.AddComponent<Badge>();
@@ -67,25 +118,26 @@ namespace StorageMaster.UI
             colors.highlightedColor = new Color(1f, 0.85f, 0.6f);
             colors.selectedColor = colors.normalColor;
             badge.colors = colors;
-            badge.Menu = menu;
-            badge.Home = below.anchoredPosition + new Vector2(0f, below.sizeDelta.y + 12f);
-            badge.Boxes = new Transform[boxes.Length + 1];
-            badge.Boxes[0] = below;
-            boxes.CopyTo(badge.Boxes, 1);
-            badge.MenuOpen = menuOpen;
-            badge.X = x;
-            badge.Y = y;
-            badge.onClick.AddListener(badge.Toggle);
-            UIKit.ButtonSound(rt.gameObject);
-            UIKit.Tooltip(rt.gameObject, " ");
+            return badge;
+        }
 
-            menu.SetParent(panel, false);
-            menu.anchorMin = menu.anchorMax = rt.anchorMin;
+        private Badge Finish(RectTransform menu, ConfigEntry<bool> menuOpen, ConfigEntry<int> x, ConfigEntry<int> y)
+        {
+            Menu = menu;
+            MenuOpen = menuOpen;
+            X = x;
+            Y = y;
+            onClick.AddListener(Toggle);
+            UIKit.ButtonSound(gameObject);
+            UIKit.Tooltip(gameObject, " ");
+
+            menu.SetParent(Parent, false);
+            menu.anchorMin = menu.anchorMax = Rect.anchorMin;
             menu.SetAsLastSibling();
             // An open menu is never covered, e.g. by the crafting panel. Its tooltips go into its layer too, so they show.
             OnTop(menu.gameObject, true, 2);
-            badge.Apply();
-            return badge;
+            Apply();
+            return this;
         }
 
         /// <summary>Removes everything but the looks (RectTransform, CanvasRenderer, Image) from a copied object.</summary>
@@ -130,7 +182,7 @@ namespace StorageMaster.UI
         {
             Bounds mine = RectTransformUtility.CalculateRelativeRectTransformBounds(Parent, Rect);
             mine.Expand(new Vector3(0f, 0f, 1f));
-            Rect panel = Parent.rect;
+            Rect panel = PanelRect();
             if (new Bounds(panel.center, new Vector3(panel.width, panel.height, 1f)).Intersects(mine)) return true;
             foreach (Transform sibling in Parent)
             {
@@ -140,6 +192,18 @@ namespace StorageMaster.UI
                 if (theirs.size.x > 0f && theirs.Intersects(mine)) return true;
             }
             return false;
+        }
+
+        /// <summary>
+        /// Its panel's own rect in its parent's units (without the panel's children, which can reach far outside it, like
+        /// SeneaL UI's hidden tooltips).
+        /// </summary>
+        private Rect PanelRect()
+        {
+            if (Panel == Parent) return Parent.rect;
+            Panel.GetWorldCorners(_corners);
+            Vector2 min = Parent.InverseTransformPoint(_corners[0]), max = Parent.InverseTransformPoint(_corners[2]);
+            return UnityEngine.Rect.MinMaxRect(min.x, min.y, max.x, max.y);
         }
 
         public void Toggle()
@@ -175,7 +239,8 @@ namespace StorageMaster.UI
                 tip.m_text = $"Click: open or close the menu\n{Plugin.DragKey.Value} + drag: move this button";
             }
 
-            bool open = MenuOpen.Value;
+            // A hidden badge (SeneaL UI's chest badge without a chest) hides its menu too, which isn't always inside its panel.
+            bool open = MenuOpen.Value && gameObject.activeInHierarchy;
             if (Menu.gameObject.activeSelf != open) Menu.gameObject.SetActive(open);
             if (!open) return;
             OnTop(Menu.gameObject, true, 2);

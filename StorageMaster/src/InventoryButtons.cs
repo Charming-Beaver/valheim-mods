@@ -8,14 +8,16 @@ namespace StorageMaster
     /// <summary>
     /// Valheim-style buttons in menus next to the inventory panel and the open chest's panel. Each menu opens from a badge
     /// on the panel's edge, above its weight box, which can be moved out of the way of other mods' windows (#5).
+    /// SeneaL UI draws panels of its own over the game's, which it hides; then the badges sit next to its panels (#64).
     /// </summary>
     public static class InventoryButtons
     {
         private const float ButtonW = 160f, ButtonH = 36f, Gap = 4f, Pad = 8f;
+        private static readonly Vector2 SeneaLBadgeSize = new Vector2(48f, 30f);
 
         private static Button _sort, _mode, _quickStack, _autoSort, _storage, _info, _options, _sortChest, _chestMode, _backpackQuickStack;
         private static Badge _badge, _chestBadge;
-        private static RectTransform _chestMenu;
+        private static RectTransform _menu, _chestMenu, _chestBadgeLook;
         // What the chest menu shows: a chest, the backpack, or the backpack with its own Quick stack.
         private enum ChestMenuFor { Chest, Backpack, BackpackWithQuickStack }
         private static ChestMenuFor _chestMenuFor;
@@ -24,23 +26,67 @@ namespace StorageMaster
         {
             InventoryGui gui = InventoryGui.instance;
             if (gui == null || gui.m_player == null) return;
-            if (_badge != null)
+            if (_menu == null)
             {
-                if (InventoryGui.IsVisible())
-                {
-                    _badge.Apply();
-                    if (_chestBadge != null && _chestBadge.gameObject.activeInHierarchy)
-                    {
-                        // First, so the menu is kept on screen at its new size.
-                        UpdateChestMenu(gui.m_currentContainer);
-                        _chestBadge.Apply();
-                    }
-                }
-                return;
+                if (!UIKit.Init() || gui.m_weight == null) return;
+                MakeMenus(gui);
             }
-            if (!UIKit.Init() || gui.m_weight == null) return;
+            if (_badge != null && !InventoryGui.IsVisible()) return;
 
-            RectTransform menu = Menu("StorageMaster_Menu", 7);
+            // On SeneaL UI's panel when it draws its own, else on the game's.
+            RectTransform seneaL = SeneaLCompat.InventoryPanel;
+            if (_badge == null || _badge.Panel != (seneaL != null ? seneaL : gui.m_player))
+            {
+                if (_badge != null) Object.Destroy(_badge.gameObject);
+                _badge = seneaL != null
+                    ? Badge.CreateNextTo(seneaL, SeneaLLook(seneaL, BoxOf(gui.m_player, gui.m_weight)), SeneaLBadgeSize, "StorageMaster_Badge", _menu,
+                        Plugin.InventoryMenuOpen, Plugin.InventoryBadgeX, Plugin.InventoryBadgeY)
+                    : Badge.Create(gui.m_player, BoxOf(gui.m_player, gui.m_weight), "StorageMaster_Badge", _menu,
+                        Plugin.InventoryMenuOpen, Plugin.InventoryBadgeX, Plugin.InventoryBadgeY, gui.m_armor != null ? BoxOf(gui.m_player, gui.m_armor) : null);
+            }
+            else _badge.Apply();
+
+            if (_chestMenu == null) return;
+            RectTransform seneaLChest = SeneaLCompat.ChestPanel;
+            // SeneaL UI can draw its chest panel before its inventory panel, whose pill the badge looks like.
+            RectTransform chestLook = seneaLChest != null ? SeneaLLook(seneaL, BoxOf(gui.m_container, gui.m_containerWeight)) : null;
+            if (_chestBadge == null || _chestBadge.Panel != (seneaLChest != null ? seneaLChest : gui.m_container) || _chestBadgeLook != chestLook)
+            {
+                if (_chestBadge != null) Object.Destroy(_chestBadge.gameObject);
+                _chestBadgeLook = chestLook;
+                _chestBadge = seneaLChest != null
+                    ? Badge.CreateNextTo(seneaLChest, chestLook, SeneaLBadgeSize, "StorageMaster_ChestBadge",
+                        _chestMenu, Plugin.ChestMenuOpen, Plugin.ChestBadgeX, Plugin.ChestBadgeY)
+                    : Badge.Create(gui.m_container, BoxOf(gui.m_container, gui.m_containerWeight), "StorageMaster_ChestBadge", _chestMenu,
+                        Plugin.ChestMenuOpen, Plugin.ChestBadgeX, Plugin.ChestBadgeY);
+            }
+            // Next to SeneaL UI's chest panel it isn't hidden along with it, and neither is its menu.
+            if (seneaLChest != null && _chestBadge.gameObject.activeSelf != SeneaLCompat.ChestShown)
+            {
+                _chestBadge.gameObject.SetActive(SeneaLCompat.ChestShown);
+                if (!SeneaLCompat.ChestShown) _chestMenu.gameObject.SetActive(false);
+            }
+            if (_chestBadge.gameObject.activeInHierarchy)
+            {
+                // First, so the menu is kept on screen at its new size.
+                UpdateChestMenu(gui.m_currentContainer);
+                _chestBadge.Apply();
+            }
+        }
+
+        /// <summary>
+        /// SeneaL UI's armor pill in the header of its inventory panel, for the badges to look like; the game's box when
+        /// SeneaL UI doesn't draw its inventory panel (yet).
+        /// </summary>
+        private static RectTransform SeneaLLook(RectTransform inventoryPanel, RectTransform gameBox)
+        {
+            Transform pill = inventoryPanel != null ? inventoryPanel.Find("chip_shield") : null;
+            return pill != null ? (RectTransform)pill : gameBox;
+        }
+
+        private static void MakeMenus(InventoryGui gui)
+        {
+            RectTransform menu = _menu = Menu("StorageMaster_Menu", 7);
             _sort = Make(menu, "Sort", () => Sorter.SortPlayer(silent: false), 0,
                 "Sorts everything below the hotbar and merges partial stacks.\nAlt + click a slot to lock it, so Sort leaves it alone.");
             _mode = Make(menu, "", Sorter.CycleMode, 1, "Click to change what Sort orders by.");
@@ -52,8 +98,6 @@ namespace StorageMaster
             _info = Make(menu, "Info", InfoWindow.Open, 5, "How Storage Master works, and its hotkeys.");
             _options = Make(menu, "Options", OptionsWindow.Open, 6,
                 "Hotkeys, settings, and the menu buttons' drag key and positions (Reset puts a menu button back).");
-            _badge = Badge.Create(gui.m_player, BoxOf(gui.m_player, gui.m_weight), "StorageMaster_Badge", menu,
-                Plugin.InventoryMenuOpen, Plugin.InventoryBadgeX, Plugin.InventoryBadgeY, gui.m_armor != null ? BoxOf(gui.m_player, gui.m_armor) : null);
 
             if (gui.m_container != null && gui.m_containerWeight != null)
             {
@@ -65,8 +109,6 @@ namespace StorageMaster
                     "Puts the items in your backpack into nearby chests that already hold the same kind of item.\nYour inventory stays as it is.");
                 _backpackQuickStack.gameObject.SetActive(false);
                 _chestMenuFor = ChestMenuFor.Chest;
-                _chestBadge = Badge.Create(gui.m_container, BoxOf(gui.m_container, gui.m_containerWeight), "StorageMaster_ChestBadge", chestMenu,
-                    Plugin.ChestMenuOpen, Plugin.ChestBadgeX, Plugin.ChestBadgeY);
             }
             Refresh();
         }

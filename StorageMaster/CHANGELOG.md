@@ -14,6 +14,7 @@
 - With SeneaL UI, Quick stack and Place stacks keep your hotbar and locked slots again, both Storage Master's and SeneaL UI's, and Quick stack counts only the items it moved
 - With SeneaL UI, Sort and auto-sort leave its equipment and quick slots alone and no longer put items in slots it doesn't let you use, and the Storage window shows only your regular inventory rows
 - With SeneaL UI, Alt + click locks a slot only once, with SeneaL UI's lock: Sort, Quick stack and the Storage window keep SeneaL UI's locked slots, and slots you locked with Storage Master before become SeneaL UI's locks
+- With SeneaL UI, the inventory and chest menu buttons sit just under SeneaL UI's own panels with its look, instead of over its inventory or hidden with the game's chest panel, and the chest menu no longer stays on screen without a chest
 
 ## 1.2.0
 
