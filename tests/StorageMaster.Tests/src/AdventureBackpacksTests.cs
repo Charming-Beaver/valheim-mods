@@ -276,6 +276,33 @@ namespace StorageMaster.Tests
             Assert.Equal("Wood x4 @0,0, Resin x6 @2,0", Describe(backpack), "Backpack after Tidy up and Sort all");
         }
 
+        /// <summary>Gather here takes from the backpack only when "Also gather from my backpack" is ticked.</summary>
+        [Test, RequiresMod(AdventureBackpacksCompat.Guid)]
+        private static IEnumerator GatherHereFromTheBackpackWhenTicked()
+        {
+            Inventory backpack = WearBackpack();
+            Container chest = SpawnChest();
+            Put(chest.GetInventory(), "Resin", 5, 0, 0);
+            Put(backpack, "Resin", 6, 1, 0);
+            Put(Mine, "Resin", 2, 2, 2);
+            yield return OpenStorageWindow();
+            Assert.True(StorageWindow._includeBackpack.gameObject.activeInHierarchy && StorageWindow._includeBackpack.interactable, "The backpack checkbox is shown");
+            StorageWindow._selected = Name("Resin");
+            StorageWindow._includeMe.isOn = false;
+            StorageWindow.Card card = StorageWindow._cards.First(c => c.Chest == chest);
+
+            StorageWindow._includeBackpack.isOn = false;
+            StorageWindow.GatherInto(card);
+            Assert.Equal(6, Count(backpack, "Resin"), "Resin stays in the backpack when not ticked");
+
+            StorageWindow._includeBackpack.isOn = true;
+            yield return Screenshot("storage-window-gather-from-backpack");
+            StorageWindow.GatherInto(card);
+            Assert.Equal(11, Count(chest.GetInventory(), "Resin"), "Resin from the backpack gathered");
+            Assert.Equal(0, Count(backpack, "Resin"), "Resin left in the backpack");
+            Assert.Equal(2, Count(Mine, "Resin"), "Resin stays in the inventory (its box isn't ticked)");
+        }
+
         // ------------------------------------------------------------------ helpers
 
         /// <summary>Puts on a backpack and returns its inventory. A new Meadows backpack has a single row of 3 slots.</summary>

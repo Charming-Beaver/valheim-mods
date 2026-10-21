@@ -4,7 +4,7 @@
 
 ### Added
 - Works with Adventure Backpacks: Quick stack also puts items from the backpack you're wearing into nearby chests (setting "Quick stack from the backpack" in Options; when it's off, the open backpack gets a Quick stack button of its own), and Sort chest becomes Sort backpack when the backpack is open
-- The Storage window shows the backpack you're wearing under your inventory (scrolling when both don't fit). Ctrl + click moves its items into the chests, and Tidy up, Sort all and Gather here leave it alone
+- The Storage window shows the backpack you're wearing under your inventory (scrolling when both don't fit). Ctrl + click moves its items into the chests, and Tidy up, Sort all and Gather here leave it alone unless you tick "Also gather from my backpack"
 
 ### Changed
 - The Storage window opens right away and fills in nearest chest first, instead of freezing the game for a moment in bases with many chests

@@ -32,6 +32,7 @@ namespace StorageMaster.Tests
         public static IEnumerator Reset()
         {
             StorageWindow.Close();
+            if (StorageWindow._includeBackpack != null) StorageWindow._includeBackpack.isOn = false;
             InfoWindow.Close();
             OptionsWindow.Close();
             if (InventoryGui.IsVisible()) InventoryGui.instance.Hide();

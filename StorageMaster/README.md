@@ -57,7 +57,7 @@ Opens every chest around you at once, next to your inventory, using the game's o
 
 ![A chosen item: every stack lights up, with totals in the panel](https://raw.githubusercontent.com/Charming-Beaver/valheim-mods/main/StorageMaster/images/chosen-item.jpg)
 
-- **Gather here:** pulls all of the chosen item into one chest. Whatever doesn't fit flows into the next chests. Optionally it also takes them from your inventory (never from your hotbar or locked slots).
+- **Gather here:** pulls all of the chosen item into one chest. Whatever doesn't fit flows into the next chests. Optionally it also takes them from your inventory (never from your hotbar or locked slots) and, with Adventure Backpacks, from your backpack.
 
 | Before | After Gather here |
 |---|---|

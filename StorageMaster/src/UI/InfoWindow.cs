@@ -46,7 +46,7 @@ namespace StorageMaster.UI
 
             Section(c, "Storage window");
             Para(c, "<color=#ffa13c>Storage</color> opens every chest around you at once, next to your inventory" +
-                    (AdventureBackpacksCompat.Active ? " and the backpack you're wearing (Tidy up, Sort all and Gather here leave the backpack alone)." : "."));
+                    (AdventureBackpacksCompat.Active ? " and the backpack you're wearing (Tidy up and Sort all leave the backpack alone; Gather here takes from it when you tick Also gather from my backpack)." : "."));
             Para(c, "<color=#ffa13c>Click</color> picks up and puts down, like the normal chest window.  <color=#ffa13c>Shift + click</color> takes half a stack.  " +
                     "<color=#ffa13c>Ctrl + click</color> moves an item between you and the chests.  <color=#ffa13c>Alt + click</color> locks one of your slots.  " +
                     "<color=#ffa13c>Esc</color> puts a carried item back, or closes the window.");
