@@ -26,17 +26,50 @@ namespace StorageMaster.Tests
             Put(Mine, "Wood", 10, 4, 2);
             Lock(0, 1);
             Assert.True(ToggleSeneaLLock(1, 1), "SeneaL UI locked the slot");
-            try
-            {
-                inv.StackAll(Mine, message: false);
-            }
-            finally
-            {
-                ToggleSeneaLLock(1, 1); // SeneaL UI saves its locks, so they'd stay for the next tests
-            }
+
+            inv.StackAll(Mine, message: false);
 
             Assert.Equal(11, Count(inv, "Wood"), "Wood in the chest (only the free stack)");
-            Assert.Equal(15, Count(Mine, "Wood"), "Wood kept in the hotbar, our locked slot and SeneaL's locked slot");
+            Assert.Equal(15, Count(Mine, "Wood"), "Wood kept in the hotbar and both locked slots");
+        }
+
+        [Test, RequiresMod(SeneaLCompat.Guid)]
+        private static void AltClickLocksOnlyWithSeneaL()
+        {
+            Assert.True(!Locks.HandlesAltClick(InventoryGui.instance.m_playerGrid), "Alt + click on the inventory is left to SeneaL UI");
+
+            Lock(2, 3); // as Alt + click in the Storage window
+            Assert.True(SeneaLLocked(2, 3), "The Storage window locks the slot with SeneaL UI's lock");
+            Assert.True(!Me.m_customData.TryGetValue(LocksKey, out string own) || own == "", "No Storage Master lock of its own");
+            Lock(2, 3);
+            Assert.True(!SeneaLLocked(2, 3), "The Storage window unlocks SeneaL UI's lock");
+        }
+
+        [Test, RequiresMod(SeneaLCompat.Guid)]
+        private static void SortKeepsSeneaLsLockedSlots()
+        {
+            ItemDrop.ItemData wood = Put(Mine, "Wood", 5, 6, 2);
+            Put(Mine, "Stone", 5, 3, 3);
+            Assert.True(ToggleSeneaLLock(6, 2), "SeneaL UI locked the slot");
+
+            Sorter.SortPlayer(silent: true);
+
+            Assert.Equal(new Vector2i(6, 2), wood.m_gridPos, "Wood stays in SeneaL's locked slot");
+            Assert.True(Mine.GetItemAt(0, 1)?.m_shared.m_name == "$item_stone", "Stone sorted to the first free slot");
+        }
+
+        [Test, RequiresMod(SeneaLCompat.Guid)]
+        private static void EarlierLocksAreHandedOverToSeneaL()
+        {
+            // Locked with Storage Master before installing SeneaL UI, read back as after logging in.
+            Me.m_customData[LocksKey] = "2,3;4,1";
+            Locks._loadedFor = null;
+
+            Assert.True(Locks.IsLocked(2, 3) && Locks.IsLocked(4, 1), "Earlier locks are still locked");
+            Assert.True(SeneaLLocked(2, 3) && SeneaLLocked(4, 1), "They're SeneaL UI's locks now");
+            Assert.Equal("", Me.m_customData[LocksKey], "Storage Master's own locks");
+            ToggleSeneaLLock(2, 3); // SeneaL UI's Alt + click
+            Assert.True(!Locks.IsLocked(2, 3), "SeneaL UI's Alt + click unlocks them");
         }
 
         [Test, RequiresMod(SeneaLCompat.Guid)]
@@ -88,6 +121,12 @@ namespace StorageMaster.Tests
         }
 
         private static Type SlotsType => Chainloader.PluginInfos[SeneaLCompat.Guid].Instance.GetType().Assembly.GetType("SeneaLUI.Inv.Slots");
+
+        private static bool SeneaLLocked(int x, int y)
+        {
+            MethodInfo locked = SlotsType.GetMethod("Locked", BindingFlags.Public | BindingFlags.Static, null, new[] { typeof(int), typeof(int) }, null);
+            return (bool)locked.Invoke(null, new object[] { x, y });
+        }
 
         /// <summary>Locks or unlocks a slot with SeneaL UI's own locks; returns whether it's locked now.</summary>
         private static bool ToggleSeneaLLock(int x, int y)

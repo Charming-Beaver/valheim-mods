@@ -11,6 +11,8 @@ namespace StorageMaster
     /// <summary>
     /// Locked inventory slots: Sort, auto-sort and quick stack never touch what's in them.
     /// Alt + click a slot to lock or unlock it. Saved per character.
+    /// SeneaL UI has locks of its own on the same click, so while it's on, Storage Master leaves the click to it, hands
+    /// its own locks over to SeneaL UI (so they can be unlocked there) and counts SeneaL UI's locks as locked.
     /// </summary>
     public static class Locks
     {
@@ -23,7 +25,13 @@ namespace StorageMaster
         private static Sprite _lockSprite;
         private static bool _searchedSprite;
 
+        /// <summary>True for a slot of your inventory locked by Storage Master or SeneaL UI.</summary>
         public static bool IsLocked(int x, int y)
+        {
+            return IsOwnLocked(x, y) || SeneaLCompat.IsLocked(Player.m_localPlayer?.GetInventory(), new Vector2i(x, y));
+        }
+
+        private static bool IsOwnLocked(int x, int y)
         {
             EnsureLoaded();
             return _locked.Contains(new Vector2i(x, y));
@@ -34,23 +42,55 @@ namespace StorageMaster
             Player player = Player.m_localPlayer;
             if (player == null) return;
             EnsureLoaded();
-            bool now = !_locked.Remove(pos);
-            if (now) _locked.Add(pos);
-            player.m_customData[Key] = string.Join(";", _locked.Select(p => $"{p.x},{p.y}"));
+            bool now;
+            if (SeneaLCompat.HasLocks(player.GetInventory()))
+            {
+                now = SeneaLCompat.ToggleLock(player.GetInventory(), pos);
+            }
+            else
+            {
+                now = !_locked.Remove(pos);
+                if (now) _locked.Add(pos);
+                Save(player);
+            }
             player.Message(MessageHud.MessageType.TopLeft, now ? "Slot locked: Sort and quick stack will leave it alone" : "Slot unlocked");
         }
+
+        /// <summary>
+        /// True when Alt + click on this grid locks a slot with Storage Master's locks: on your inventory, unless SeneaL
+        /// UI locks it with its own.
+        /// </summary>
+        public static bool HandlesAltClick(InventoryGrid grid)
+        {
+            Player player = Player.m_localPlayer;
+            return IsPlayerGrid(grid) && player != null && !SeneaLCompat.HasLocks(player.GetInventory());
+        }
+
+        private static void Save(Player player) => player.m_customData[Key] = string.Join(";", _locked.Select(p => $"{p.x},{p.y}"));
 
         private static void EnsureLoaded()
         {
             Player player = Player.m_localPlayer;
-            if (player == _loadedFor) return;
-            _loadedFor = player;
-            _locked.Clear();
-            if (player == null || !player.m_customData.TryGetValue(Key, out string data)) return;
-            foreach (string part in data.Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries))
+            if (player != _loadedFor)
             {
-                string[] xy = part.Split(',');
-                if (xy.Length == 2 && int.TryParse(xy[0], out int x) && int.TryParse(xy[1], out int y)) _locked.Add(new Vector2i(x, y));
+                _loadedFor = player;
+                _locked.Clear();
+                if (player != null && player.m_customData.TryGetValue(Key, out string data))
+                {
+                    foreach (string part in data.Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries))
+                    {
+                        string[] xy = part.Split(',');
+                        if (xy.Length == 2 && int.TryParse(xy[0], out int x) && int.TryParse(xy[1], out int y)) _locked.Add(new Vector2i(x, y));
+                    }
+                }
+            }
+            // Locks from before SeneaL UI (or from while it was off) become its locks, so its Alt + click can unlock them.
+            if (_locked.Count > 0 && player != null && SeneaLCompat.HasLocks(player.GetInventory()))
+            {
+                SeneaLCompat.AddLocks(player.GetInventory(), _locked);
+                Debug.Log($"[Storage Master] Handed {_locked.Count} locked slot(s) over to SeneaL UI");
+                _locked.Clear();
+                Save(player);
             }
         }
 
@@ -65,7 +105,7 @@ namespace StorageMaster
             [HarmonyPatch(typeof(InventoryGrid), nameof(InventoryGrid.OnLeftDown)), HarmonyPrefix]
             private static bool OnLeftDown(InventoryGrid __instance, UIInputHandler clickHandler)
             {
-                if (!AltHeld() || !IsPlayerGrid(__instance)) return true;
+                if (!AltHeld() || !HandlesAltClick(__instance)) return true;
                 Vector2i pos = __instance.GetButtonPos(clickHandler.gameObject);
                 if (pos.x >= 0) Toggle(pos);
                 return false;
@@ -74,24 +114,25 @@ namespace StorageMaster
             [HarmonyPatch(typeof(InventoryGrid), nameof(InventoryGrid.OnLeftClick)), HarmonyPrefix]
             private static bool OnLeftClick(InventoryGrid __instance)
             {
-                return !(AltHeld() && IsPlayerGrid(__instance));
+                return !(AltHeld() && HandlesAltClick(__instance));
             }
 
-            // Draw a lock marker on locked slots of the player grid.
+            // Draw a lock marker on locked slots of the player grid (SeneaL UI marks its own locks there itself).
             [HarmonyPatch(typeof(InventoryGrid), nameof(InventoryGrid.UpdateGui)), HarmonyPostfix]
             private static void UpdateGui(InventoryGrid __instance)
             {
-                if (IsPlayerGrid(__instance)) DrawOverlays(__instance);
+                if (IsPlayerGrid(__instance)) DrawOverlays(__instance, ownOnly: true);
             }
         }
 
         /// <summary>Shows the lock marker on locked slots of a grid that displays your inventory.</summary>
-        public static void DrawOverlays(InventoryGrid grid)
+        public static void DrawOverlays(InventoryGrid grid, bool ownOnly = false)
         {
                 foreach (InventoryElement element in grid.m_elements)
                 {
                     if (element == null) continue;
-                    bool locked = IsLocked(element.Position.x, element.Position.y);
+                    Vector2i pos = element.Position;
+                    bool locked = ownOnly ? IsOwnLocked(pos.x, pos.y) : IsLocked(pos.x, pos.y);
                     Transform overlay = element.transform.Find(OverlayName);
                     if (overlay == null)
                     {

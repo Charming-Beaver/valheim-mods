@@ -16,7 +16,7 @@ namespace StorageMaster.Tests
         public const string ChestPrefab = "piece_chest_wood";
 
         // Saved-data keys of the mod (see Locks and Exclusions).
-        private const string LocksKey = "InventoryTools.Locks";
+        public const string LocksKey = "InventoryTools.Locks";
         private const string ExcludedKey = "InventoryTools.Excluded";
 
         public static string ScreenshotPath;
@@ -47,6 +47,12 @@ namespace StorageMaster.Tests
             // Both cache what they loaded per player; forget it so the cleared data is read again.
             Locks._loadedFor = null;
             Exclusions._loadedFor = null;
+            // With SeneaL UI, locks are its own, saved on the character too.
+            if (SeneaLCompat.HasLocks(Mine))
+            {
+                SeneaLCompat._locksOf(Mine).Clear();
+                SeneaLCompat._saveLocks();
+            }
             // A quick stack summary still due from the last test would show up in the next one.
             QuickStack._reportAt = -1f;
             ChestAccess._waiting.Clear();
