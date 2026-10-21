@@ -75,6 +75,8 @@ namespace StorageMaster.UI
             if (InventoryGui.IsVisible()) InventoryGui.instance.Hide();
             Root.SetActive(true);
             Root.transform.SetAsLastSibling();
+            // In SeneaL UI's look while it draws the inventory its way.
+            Themed.Sync(Root.transform);
             Opened?.Invoke();
         }
 

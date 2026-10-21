@@ -156,6 +156,8 @@ namespace StorageMaster
             Image tint = root.gameObject.AddComponent<Image>();
             tint.color = new Color(1f, 0.631f, 0.235f, 0.18f);
             tint.raycastTarget = false;
+            // Gold with SeneaL UI's look (in the Storage window).
+            Themed.Mark(tint, Themed.Role.Tint);
 
             RectTransform badge = UIKit.Rect(root, "badge");
             badge.anchorMin = badge.anchorMax = badge.pivot = new Vector2(1, 1);
@@ -172,6 +174,7 @@ namespace StorageMaster
             {
                 img.color = new Color(1f, 0.631f, 0.235f, 0.95f);
                 badge.sizeDelta = new Vector2(8, 8);
+                Themed.Mark(img, Themed.Role.Tint);
             }
             return root;
         }

@@ -3,6 +3,7 @@
 ## Unreleased
 
 ### Added
+- With SeneaL UI, Storage Master's menus and its Storage, Info and Options windows take SeneaL UI's look (its panels, buttons, fonts and colors), and go back to the Valheim look when SeneaL UI's inventory is switched off
 - Works with Adventure Backpacks: Quick stack also puts items from the backpack you're wearing into nearby chests (setting "Quick stack from the backpack" in Options; when it's off, the open backpack gets a Quick stack button of its own), and Sort chest becomes Sort backpack when the backpack is open
 - The Storage window shows the backpack you're wearing under your inventory (scrolling when both don't fit). Ctrl + click moves its items into the chests, and Tidy up, Sort all and Gather here leave it alone unless you tick "Also gather from my backpack"
 
