@@ -33,8 +33,15 @@ jobs:
             if (mod === '_No response_') return;
 
             const values = [{ field_id: Number(process.env.MOD_FIELD), value: mod }];
-            // Issues the maintainers open get their source set by hand (Reddit, Nexus, Tests, ...).
-            const own = ['OWNER', 'MEMBER', 'COLLABORATOR'].includes(issue.author_association);
+            // Issues the maintainers open get their source set by hand (Reddit, Nexus, Tests, ...). The payload's
+            // author_association can't be used: with private org membership it doesn't say MEMBER in workflows.
+            let own = false;
+            try {
+              const { data } = await github.rest.repos.getCollaboratorPermissionLevel({ ...context.repo, username: issue.user.login });
+              own = ['admin', 'maintain', 'write'].includes(data.permission);
+            } catch (e) {
+              if (e.status !== 404) throw e;
+            }
             if (context.payload.action === 'opened' && !own) {
               values.push({ field_id: Number(process.env.SOURCE_FIELD), value: 'GitHub' });
             }
