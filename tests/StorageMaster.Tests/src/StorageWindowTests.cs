@@ -77,6 +77,21 @@ namespace StorageMaster.Tests
             Assert.Equal(5, Count(Mine, "Wood"), "Wood left on me");
         }
 
+        // Opening takes the chests over with the game's "Place stacks" request. Mods that replace its answer with their
+        // own quick stack (Quick Stack Store Sort Trash Restock) mustn't get to move anything then (#49).
+        [Test]
+        private static IEnumerator OpeningLeavesMyInventoryAlone()
+        {
+            Container a = SpawnChest(3f, 0f);
+            Put(a.GetInventory(), "Wood", 10, 0, 0);
+            Put(Mine, "Wood", 5, 2, 2);
+
+            yield return OpenAndWait();
+
+            Assert.Equal(5, Count(Mine, "Wood"), "Wood left on me");
+            Assert.Equal(10, Count(a.GetInventory(), "Wood"), "Wood in the chest");
+        }
+
         [Test]
         private static IEnumerator GatherHereSkipsChestsMarkedSkip()
         {
