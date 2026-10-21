@@ -55,6 +55,43 @@ namespace StorageMaster.Tests
             AssertRowsLaidOut(OptionsWindow._window.Root);
         }
 
+        /// <summary>
+        /// Every text with something to say is actually drawn: it has room, it isn't see-through, and its letters show.
+        /// (With SeneaL UI's look the Options window's labels once had none.)
+        /// </summary>
+        [Test]
+        private static IEnumerator InfoAndOptionsTextsAreDrawn()
+        {
+            InfoWindow.Open();
+            yield return Frames(3);
+            AssertAllDrawn(InfoWindow._window.Root);
+            OptionsWindow.Open();
+            yield return Frames(3);
+            AssertAllDrawn(OptionsWindow._window.Root);
+        }
+
+        public static void AssertAllDrawn(GameObject root)
+        {
+            var problems = new List<string>();
+            foreach (TMP_Text text in root.GetComponentsInChildren<TMP_Text>(includeInactive: false))
+            {
+                // An empty input field holds a zero width space.
+                if (string.IsNullOrWhiteSpace(text.text.Replace("​", "")) || !text.enabled) continue;
+                text.ForceMeshUpdate();
+                Rect r = text.rectTransform.rect;
+                string problem = r.width < 4f || r.height < 4f ? $"no room ({r.width:0}x{r.height:0})"
+                    : text.color.a < 0.3f ? $"see-through (color {text.color})"
+                    : text.textInfo.characterCount == 0 || text.textBounds.size.x <= 0f ? "no letters drawn" : null;
+                if (problem != null)
+                {
+                    problems.Add($"\"{Shorten(text.text)}\" ({Path(text.transform, root.transform)}): {problem}, font {text.font?.name}, size {text.fontSize}, "
+                        + $"rect {r.width:0}x{r.height:0}, letters {text.textInfo.characterCount}, overflow {text.overflowMode}/{text.isTextOverflowing}, "
+                        + $"ellipsis in font {text.font != null && text.font.HasCharacter('…')}");
+                }
+            }
+            Assert.True(problems.Count == 0, $"{problems.Count} texts in {root.name} aren't drawn:\n" + string.Join("\n", problems.Take(10)));
+        }
+
         private static void AssertRowsLaidOut(GameObject root)
         {
             UnityEngine.UI.ScrollRect scroll = root.GetComponentInChildren<UnityEngine.UI.ScrollRect>();

@@ -47,6 +47,8 @@ namespace StorageMaster.Tests
             // Both cache what they loaded per player; forget it so the cleared data is read again.
             Locks._loadedFor = null;
             Exclusions._loadedFor = null;
+            // A theme test may have switched SeneaL UI's inventory off.
+            ThemeTests.RestoreSeneaL();
             // With SeneaL UI, locks are its own, saved on the character too.
             if (SeneaLCompat.HasLocks(Mine))
             {

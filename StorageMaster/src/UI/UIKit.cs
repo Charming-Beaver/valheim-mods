@@ -18,12 +18,34 @@ namespace StorageMaster.UI
         public static Material FontMaterial;
         public static Sprite PanelSprite, ButtonSprite, FieldSprite, SlotSprite, CheckSprite, CheckMarkSprite, InteriorSprite;
 
-        public static readonly Color Orange = new Color(1f, 0.631f, 0.235f);
-        public static readonly Color Parchment = new Color(0.93f, 0.89f, 0.80f);
-        public static readonly Color Grey = new Color(0.68f, 0.66f, 0.62f);
+        // The Valheim colors; with SeneaL UI's look (SeneaLTheme) they're its closest ones.
+        private static readonly Color OrangeV = new Color(1f, 0.631f, 0.235f);
+        private static readonly Color ParchmentV = new Color(0.93f, 0.89f, 0.80f);
+        private static readonly Color GreyV = new Color(0.68f, 0.66f, 0.62f);
+        private static readonly Color RedV = new Color(1f, 0.38f, 0.32f);
+        private static readonly Color GreenV = new Color(0.55f, 0.85f, 0.4f);
+        public static Color Orange => SeneaLTheme.On ? SeneaLTheme.Gold : OrangeV;
+        public static Color Parchment => SeneaLTheme.On ? SeneaLTheme.Parchment : ParchmentV;
+        public static Color Grey => SeneaLTheme.On ? SeneaLTheme.Ash : GreyV;
         public static readonly Color Dim = new Color(0f, 0f, 0f, 0.45f);
-        public static readonly Color Red = new Color(1f, 0.38f, 0.32f);
-        public static readonly Color Green = new Color(0.55f, 0.85f, 0.4f);
+        public static Color Red => SeneaLTheme.On ? SeneaLTheme.Blood : RedV;
+        public static Color Green => SeneaLTheme.On ? SeneaLTheme.Moss : GreenV;
+
+        /// <summary>
+        /// One of our Valheim colors as SeneaL UI's closest (or back), keeping its alpha; other colors stay as they are.
+        /// </summary>
+        public static Color Recolor(Color c, bool seneaL)
+        {
+            Color[] valheim = { OrangeV, ParchmentV, GreyV, RedV, GreenV };
+            Color[] theirs = { SeneaLTheme.Gold, SeneaLTheme.Parchment, SeneaLTheme.Ash, SeneaLTheme.Blood, SeneaLTheme.Moss };
+            Color[] from = seneaL ? valheim : theirs, to = seneaL ? theirs : valheim;
+            for (int i = 0; i < from.Length; i++)
+            {
+                if (Mathf.Abs(c.r - from[i].r) < 0.01f && Mathf.Abs(c.g - from[i].g) < 0.01f && Mathf.Abs(c.b - from[i].b) < 0.01f)
+                    return new Color(to[i].r, to[i].g, to[i].b, c.a);
+            }
+            return c;
+        }
 
         private static GameObject _buttonTemplate, _tabTemplate, _scrollbarTemplate;
         public static Transform CanvasRoot;
@@ -150,7 +172,9 @@ namespace StorageMaster.UI
 
         // ------------------------------------------------------------------ visuals
 
-        public static Image Panel(Transform parent, string name = "panel")
+        public static Image Panel(Transform parent, string name = "panel") => Themed.Mark(WoodPanel(parent, name), Themed.Role.Panel);
+
+        private static Image WoodPanel(Transform parent, string name)
         {
             RectTransform rt = Rect(parent, name);
             Image img = rt.gameObject.AddComponent<Image>();
@@ -170,7 +194,7 @@ namespace StorageMaster.UI
         /// </summary>
         public static Image DarkPanel(Transform parent, string name = "panel")
         {
-            Image img = Panel(parent, name);
+            Image img = WoodPanel(parent, name);
             InventoryGui gui = InventoryGui.instance;
             Transform bkg = gui != null && gui.m_player != null ? gui.m_player.Find("Bkg") : null;
             if (bkg != null && bkg.TryGetComponent(out Image inventory) && inventory.sprite != null)
@@ -181,7 +205,7 @@ namespace StorageMaster.UI
                 img.color = inventory.color;
                 img.pixelsPerUnitMultiplier = inventory.pixelsPerUnitMultiplier;
             }
-            return img;
+            return Themed.Mark(img, Themed.Role.Panel);
         }
 
         /// <summary>The darker recessed background used inside wooden panels.</summary>
@@ -196,7 +220,7 @@ namespace StorageMaster.UI
                 img.color = new Color(1, 1, 1, Mathf.Clamp01(alpha + 0.3f));
             }
             else img.color = new Color(0, 0, 0, alpha);
-            return img;
+            return Themed.Mark(img, Themed.Role.Inset);
         }
 
         public static Image Solid(Transform parent, Color color, string name = "solid")
@@ -205,7 +229,8 @@ namespace StorageMaster.UI
             Image img = rt.gameObject.AddComponent<Image>();
             img.color = color;
             img.raycastTarget = false;
-            return img;
+            // Our colors (rules, bars) as SeneaL UI's while its look is on.
+            return Themed.Mark(img, Themed.Role.Tint);
         }
 
         public static Image Icon(Transform parent, Sprite sprite, float size, bool slot = false)
@@ -218,6 +243,7 @@ namespace StorageMaster.UI
                 bg.sprite = SlotSprite;
                 bg.type = Image.Type.Sliced;
                 bg.color = new Color(1, 1, 1, 0.8f);
+                Themed.Mark(bg, Themed.Role.Slot);
             }
             RectTransform irt = Rect(holder, "img").Fill(slot ? 3 : 0);
             Image img = irt.gameObject.AddComponent<Image>();
@@ -247,7 +273,7 @@ namespace StorageMaster.UI
             t.richText = true;
             t.raycastTarget = false;
             t.text = text;
-            return t;
+            return Themed.Mark(t, norse ? Themed.Role.Heading : Themed.Role.Text);
         }
 
         public static TextMeshProUGUI Wrap(this TextMeshProUGUI t)
@@ -285,6 +311,7 @@ namespace StorageMaster.UI
                     t.enableAutoSizing = true;
                     t.fontSizeMin = 10;
                     t.fontSizeMax = Mathf.Max(14, t.fontSize);
+                    Themed.Mark(t, Themed.Role.Text);
                 }
                 else Text(go.transform, label, 16, Parchment, TextAlignmentOptions.Center).rectTransform.Fill();
             }
@@ -306,6 +333,8 @@ namespace StorageMaster.UI
             r.sizeDelta = new Vector2(width, height);
             r.Size(width, height);
             if (onClick != null) b.onClick.AddListener(onClick);
+            Image face = b.targetGraphic as Image;
+            Themed.Mark(face != null ? face : go.GetComponent<Image>(), tab ? Themed.Role.Tab : Themed.Role.Button, b);
             return b;
         }
 
@@ -343,6 +372,8 @@ namespace StorageMaster.UI
             Toggle tog = row.gameObject.AddComponent<Toggle>();
             tog.targetGraphic = box;
             tog.graphic = mark;
+            Themed.Mark(box, Themed.Role.Check);
+            Themed.Mark(mark, Themed.Role.CheckMark);
             tog.isOn = value;
             if (onChange != null) tog.onValueChanged.AddListener(onChange);
             if (!string.IsNullOrEmpty(label)) Text(row.transform, label, 16).Size(-1, 22, 1);
@@ -397,6 +428,7 @@ namespace StorageMaster.UI
                 Scrollbar bar = sbGo.GetComponent<Scrollbar>();
                 bar.onValueChanged = new Scrollbar.ScrollEvent();
                 bar.direction = Scrollbar.Direction.BottomToTop;
+                MarkScrollbar(bar);
                 scroll.verticalScrollbar = bar;
                 scroll.verticalScrollbarVisibility = ScrollRect.ScrollbarVisibility.AutoHideAndExpandViewport;
                 scroll.verticalScrollbarSpacing = 2;
@@ -482,6 +514,11 @@ namespace StorageMaster.UI
                 field.onEndEdit = new TMP_InputField.SubmitEvent();
                 field.onSubmit = new TMP_InputField.SubmitEvent();
                 field.text = "";
+                Themed.Mark(go.GetComponent<Image>(), Themed.Role.Field);
+                foreach (TMP_Text t in go.GetComponentsInChildren<TMP_Text>(true))
+                {
+                    if (t.GetComponent<Themed>() == null) Themed.Mark(t, Themed.Role.Text);
+                }
             }
             else
             {
@@ -490,6 +527,7 @@ namespace StorageMaster.UI
                 bg.sprite = FieldSprite;
                 bg.type = Image.Type.Sliced;
                 if (FieldSprite == null) bg.color = new Color(0, 0, 0, 0.6f);
+                Themed.Mark(bg, Themed.Role.Field);
                 RectTransform area = Rect(rt, "area").Fill(6);
                 area.gameObject.AddComponent<RectMask2D>();
                 TextMeshProUGUI ph = Text(area, "", 18, Grey, name: "Placeholder");
@@ -503,7 +541,8 @@ namespace StorageMaster.UI
                 field.textViewport = area;
                 field.textComponent = tx;
                 field.placeholder = ph;
-                field.fontAsset = Font;
+                // The text's own font: Font, or SeneaL UI's if its look is on (setting this sets the text's font).
+                field.fontAsset = tx.font;
                 field.customCaretColor = true;
                 field.caretColor = Parchment;
                 field.caretWidth = 2;
@@ -535,8 +574,16 @@ namespace StorageMaster.UI
             Scrollbar bar = sbGo.GetComponent<Scrollbar>();
             bar.onValueChanged = new Scrollbar.ScrollEvent();
             bar.direction = Scrollbar.Direction.BottomToTop;
+            MarkScrollbar(bar);
             scroll.verticalScrollbar = bar;
             scroll.verticalScrollbarVisibility = ScrollRect.ScrollbarVisibility.Permanent;
+        }
+
+        /// <summary>Marks the game's scrollbar (its track and handle) for SeneaL UI's look.</summary>
+        private static void MarkScrollbar(Scrollbar bar)
+        {
+            Themed.Mark(bar.GetComponent<Image>(), Themed.Role.ScrollTrack);
+            if (bar.handleRect != null) Themed.Mark(bar.handleRect.GetComponent<Image>(), Themed.Role.ScrollHandle, bar);
         }
 
         /// <summary>True while the player is typing into any text field of ours (or the game's).</summary>

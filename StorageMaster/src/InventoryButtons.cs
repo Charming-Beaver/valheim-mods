@@ -18,6 +18,7 @@ namespace StorageMaster
         private static Button _sort, _mode, _quickStack, _autoSort, _storage, _info, _options, _sortChest, _chestMode, _backpackQuickStack;
         private static Badge _badge, _chestBadge;
         private static RectTransform _menu, _chestMenu, _chestBadgeLook;
+        private static bool _menusSeneaL;
         // What the chest menu shows: a chest, the backpack, or the backpack with its own Quick stack.
         private enum ChestMenuFor { Chest, Backpack, BackpackWithQuickStack }
         private static ChestMenuFor _chestMenuFor;
@@ -32,6 +33,13 @@ namespace StorageMaster
                 MakeMenus(gui);
             }
             if (_badge != null && !InventoryGui.IsVisible()) return;
+            // The menus in SeneaL UI's look while it draws the inventory its way (they're built in the look of the moment).
+            if (_menusSeneaL != SeneaLTheme.On)
+            {
+                _menusSeneaL = SeneaLTheme.On;
+                Themed.Sync(_menu);
+                Themed.Sync(_chestMenu);
+            }
 
             // On SeneaL UI's panel when it draws its own, else on the game's.
             RectTransform seneaL = SeneaLCompat.InventoryPanel;
