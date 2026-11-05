@@ -10,6 +10,7 @@ body:
       label: Which mod?
       options:
         - StorageMaster
+        - VillageWorkers
     validations:
       required: true
 
