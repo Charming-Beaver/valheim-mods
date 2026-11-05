@@ -144,26 +144,16 @@ namespace VillageWorkers
 
         public static void AddSpawner(SpawnSystem system)
         {
-            if (!Plugin.SpawnEnabled.Value || Prefab == null) return;
+            if (Prefab == null) return;
             if (_spawnList == null)
             {
                 _spawnList = _holder.AddComponent<SpawnSystemList>();
-                Heightmap.Biome biomes = Heightmap.Biome.None;
-                foreach (string b in Plugin.SpawnBiomes.Value.Split(','))
-                {
-                    if (Enum.TryParse(b.Trim(), true, out Heightmap.Biome biome)) biomes |= biome;
-                }
-                if (biomes == Heightmap.Biome.None) biomes = Heightmap.Biome.Meadows;
                 _spawnList.m_spawners.Add(new SpawnSystem.SpawnData
                 {
                     m_name = PrefabName,
-                    m_enabled = true,
                     m_prefab = Prefab,
-                    m_biome = biomes,
                     m_biomeArea = Heightmap.BiomeArea.Everything,
                     m_maxSpawned = 1,
-                    m_spawnInterval = Plugin.SpawnInterval.Value,
-                    m_spawnChance = Plugin.SpawnChance.Value,
                     m_spawnDistance = 80f,
                     m_spawnRadiusMin = 30f,
                     m_spawnRadiusMax = 60f,
@@ -178,8 +168,32 @@ namespace VillageWorkers
                     m_maxLevel = 1,
                     m_minLevel = 1,
                 });
+                ApplySettings();
             }
             if (!system.m_spawnLists.Contains(_spawnList)) system.m_spawnLists.Add(_spawnList);
+        }
+
+        /// <summary>
+        /// Puts the current settings into the prefab and the spawner. They can change after both are made: when joining
+        /// a server (which brings its own settings), when leaving it, and when the config file is edited.
+        /// </summary>
+        public static void ApplySettings()
+        {
+            if (Prefab != null) Prefab.GetComponent<Humanoid>().m_health = Plugin.WorkerHealth.Value;
+            if (_spawnList == null) return;
+
+            Heightmap.Biome biomes = Heightmap.Biome.None;
+            foreach (string b in Plugin.SpawnBiomes.Value.Split(','))
+            {
+                if (Enum.TryParse(b.Trim(), true, out Heightmap.Biome biome)) biomes |= biome;
+            }
+            if (biomes == Heightmap.Biome.None) biomes = Heightmap.Biome.Meadows;
+
+            SpawnSystem.SpawnData data = _spawnList.m_spawners[0];
+            data.m_enabled = Plugin.SpawnEnabled.Value;
+            data.m_biome = biomes;
+            data.m_spawnInterval = Plugin.SpawnInterval.Value;
+            data.m_spawnChance = Plugin.SpawnChance.Value;
         }
 
         public static WorkerAI SpawnNear(Vector3 pos)
@@ -279,7 +293,7 @@ namespace VillageWorkers
                 if (Player.m_localPlayer == null) return;
                 WorkerAI w = WorkerPrefab.SpawnNear(Player.m_localPlayer.transform.position + Player.m_localPlayer.transform.forward * 3f);
                 args.Context?.AddString(w != null ? "Spawned a wandering villager." : "Villager prefab missing.");
-            });
+            }, isCheat: true); // like the game's own spawn command: needs devcommands, and on a server an admin.
             new Terminal.ConsoleCommand("vw_list", "[Village Workers] Lists loaded villagers", args =>
             {
                 foreach (WorkerAI w in WorkerAI.All)

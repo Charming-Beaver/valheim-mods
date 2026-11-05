@@ -4,7 +4,7 @@ A BepInEx mod for Valheim that adds villagers: viking NPCs you meet in the world
 
 ## Quick start
 
-1. **Meet a wanderer.** Wanderers spawn now and then during the day in the Meadows, Black Forest and Plains, 30-60 m away from you and never inside your base. They are rare: each area you walk through rolls once on entering and then every 5 minutes, with an 8% chance, and only one wanderer exists per neighbourhood. Exploring new ground in daylight is the best way to meet them; raise `SpawnChance` or lower `SpawnInterval` in the config to meet more. To get one right away, open the console (F5) and type `vw_spawn`.
+1. **Meet a wanderer.** Wanderers spawn now and then during the day in the Meadows, Black Forest and Plains, 30-60 m away from you and never inside your base. They are rare: each area you walk through rolls once on entering and then every 5 minutes, with an 8% chance, and only one wanderer exists per neighbourhood. Exploring new ground in daylight is the best way to meet them; raise `SpawnChance` or lower `SpawnInterval` in the config to meet more. To get one right away, open the console (F5) and type `devcommands`, then `vw_spawn` (on a server, only admins can).
 2. **Invite them.** Look at the wanderer and press **E**. They follow you as a *recruit*.
 3. **Give them a bed.** Press **E** on the recruit, or open the village window (**F7**), then choose **Assign bed** and look at a free bed and press **E**. They are now a villager.
 4. **Give them chests.** Click **Choose chests**, then look at chests and press **E** to add or remove them. Press **Esc** when you're done.
@@ -67,13 +67,13 @@ Click a villager in the ranking to focus all charts on them. Each villager keeps
 
 ## Console commands
 
-- `vw_spawn`: spawn a wanderer next to you
+- `vw_spawn`: spawn a wanderer next to you. It's a cheat like the game's own `spawn`: type `devcommands` first, and on a server only admins can use it
 - `vw_list`: list loaded villagers and what they are doing
 - `vw_window`: open the village window
 
 ## Configuration
 
-`BepInEx/config/charmingbeaver.valheim.villageworkers.cfg` is created on first start. It includes:
+`BepInEx/config/charmingbeaver.valheim.villageworkers.cfg` is created on first start. Changes to the file take effect as soon as it's saved, without restarting. It includes:
 
 - Hotkey
 - Spawn chance, interval and biomes
@@ -86,12 +86,70 @@ Click a villager in the ranking to focus all charts on them. Each villager keeps
 - Default hunting targets
 - How many days of detailed statistics to keep
 
+In multiplayer, the server's settings are used for everything except the hotkey and debug logging, which stay your own (see [Multiplayer and servers](#multiplayer-and-servers)).
+
+## Installation
+
+**With r2modman or Thunderstore Mod Manager:** install Village Workers from there; BepInEx is installed automatically.
+
+**Manually:**
+1. Install [BepInExPack for Valheim](https://thunderstore.io/c/valheim/p/denikson/BepInExPack_Valheim/).
+2. Copy `VillageWorkers.dll` into `Valheim/BepInEx/plugins/VillageWorkers/`.
+3. Start the game.
+
+## Multiplayer and servers
+
+Villagers are run by whoever is closest to them: usually a nearby player's game, sometimes the server. So in multiplayer **the server and every player need Village Workers**, and the server decides the settings for everyone.
+
+### Singleplayer
+
+Install the mod (see [Installation](#installation)) and play. Nothing else to set up. Your config file is used as it is.
+
+### Hosting from the game
+
+If you start a world with **Start server** ticked, your game is the server:
+
+1. Install the mod as for singleplayer.
+2. Your config file's settings (spawning, work hours, health, speed and so on) are sent to everyone who joins. Change them in your config file; players who are online get the changes right away.
+3. Every friend who joins needs the mod too (see [Joining a server](#joining-a-server)).
+
+### Dedicated server
+
+1. **Install BepInEx on the server.** Copy the contents of the `BepInExPack_Valheim` folder from [BepInExPack for Valheim](https://thunderstore.io/c/valheim/p/denikson/BepInExPack_Valheim/) into the server's folder (next to `valheim_server.exe`, or `valheim_server.x86_64` on Linux).
+   - **Windows:** start the server the way you normally do, for example with `start_headless_server.bat`. BepInEx loads by itself.
+   - **Linux:** start the server with `start_server_bepinex.sh` from the pack instead of `start_server.sh`, after putting your server's name, world and password into it.
+   - **Server hosts** (rented servers): most have a mod or BepInEx option in their control panel. Otherwise upload the same files through the host's file manager or FTP.
+2. **Install Village Workers on the server.** Copy `VillageWorkers.dll` into the server's `BepInEx/plugins/VillageWorkers/` folder.
+3. **Start the server once.** The log (`BepInEx/LogOutput.log`, or the console) shows `Village Workers ... loaded on a dedicated server`, and the config file `BepInEx/config/charmingbeaver.valheim.villageworkers.cfg` is created.
+4. **Adjust the settings** in that file if you like. They apply to everyone on the server. The server reloads the file when it's saved and sends the new settings to the players who are online, so there's no need to restart.
+5. **Tell your players** to install the same version of the mod (see below). The server turns away anyone who doesn't have it.
+
+To spawn a wanderer for testing, add your Steam ID (or your platform ID for crossplay) to the server's `adminlist.txt`, then type `devcommands` and `vw_spawn` in the in-game console.
+
+### Joining a server
+
+Yes, every player who joins a server with Village Workers needs it too:
+
+1. Install Village Workers (see [Installation](#installation)). If you use r2modman or Thunderstore Mod Manager and the server owner shares a mod profile code, importing it gets you exactly the server's mods.
+2. Use a **matching version**: the first two numbers have to be the same as the server's. For example, 1.2.0 and 1.2.3 can play together, 1.2.x and 1.3.x can't.
+3. Join as usual. You don't need to change any settings: the server's settings are used while you're connected, and your own config file is left alone and used again in singleplayer. Only your village window hotkey and debug logging stay your own.
+
+If you can't join:
+- **"Incompatible version"** without anything else: you don't have Village Workers installed (or BepInEx isn't loading). Install it and try again.
+- **"This server uses Village Workers 1.2.x, you have 1.1.0"**: update (or downgrade) the mod to the version the server names.
+
+Console players can't install mods, so they can't join a server that uses Village Workers.
+
+### When the server doesn't have the mod
+
+Players who have Village Workers can still join a server without it, and villagers work. But nothing checks that everyone has the mod: players without it don't see villagers at all, and villagers follow the settings of whichever player happens to be running them. Installing it on the server avoids both.
+
 ## Limitations
 
 - Like everything in Valheim, villagers only work while their area is loaded, meaning a player is nearby. They do not work while you are far away.
 - Villagers that are far away still show up in the window and statistics, but you can only give orders to loaded villagers.
 - Statistics are stored on each villager. If a villager dies or is dismissed, their history goes with them.
-- In multiplayer, every player needs the mod.
+- In multiplayer, every player needs the mod (see [Multiplayer and servers](#multiplayer-and-servers)).
 
 ## Building from source
 
