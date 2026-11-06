@@ -29,6 +29,7 @@ namespace VillageWorkers
         public const string K_Init = "vw_init";
         public const string K_Sleep = "vw_sleep";
         public const string K_Job = "vw_job";
+        public const string K_Claim = "vw_claim";
 
         public Humanoid Human { get; private set; }
         public Container Box { get; private set; }
@@ -200,6 +201,9 @@ namespace VillageWorkers
             _jobsBuiltFor = null;
             _nextEval = 0f;
             _wasOwner = true;
+            // Whatever the last owner was about to do is forgotten with the job.
+            _claim = Vector3.zero;
+            m_nview.GetZDO().Set(K_Claim, Vector3.zero);
             ReloadBox();
             EnsureEquipment();
         }
@@ -349,6 +353,60 @@ namespace VillageWorkers
         public void Blacklist(Component c, float seconds = 120f)
         {
             if (c != null) _blacklist[c.GetInstanceID()] = Time.time + seconds;
+        }
+
+        // ------------------------------------------------------------------ claimed spots
+
+        private Vector3 _claim;
+        private float _claimedAt;
+
+        /// <summary>
+        /// Marks the spot this villager is about to work on (a crop to pick, ground to plant), so others leave it alone.
+        /// It's kept in the ZDO, so villagers run by other players' games see it too.
+        /// </summary>
+        public void Claim(Vector3 spot)
+        {
+            if (!m_nview.IsOwner() || spot == _claim) return;
+            _claim = spot;
+            _claimedAt = Time.time;
+            m_nview.GetZDO().Set(K_Claim, spot);
+        }
+
+        public void ReleaseClaim() => Claim(Vector3.zero);
+
+        /// <summary>
+        /// Seconds since the current claim was made. Acting only once it's a second old gives a claim made at the same
+        /// moment by a villager in another player's game the time to arrive, so <see cref="ClaimedByOther"/> sees it.
+        /// </summary>
+        public float ClaimAge => _claim == Vector3.zero ? 0f : Time.time - _claimedAt;
+
+        public bool TryGetClaim(out Vector3 spot)
+        {
+            spot = m_nview != null && m_nview.IsValid() ? m_nview.GetZDO().GetVec3(K_Claim, Vector3.zero) : Vector3.zero;
+            return spot != Vector3.zero;
+        }
+
+        /// <summary>
+        /// Whether another villager has claimed a spot closer than <paramref name="dist"/>. With <paramref name="onlyFirst"/>,
+        /// only villagers that go first count: when two claim the same spot at once, both see the other's claim and
+        /// exactly one of them gives way.
+        /// </summary>
+        public bool ClaimedByOther(Vector3 spot, float dist, bool onlyFirst)
+        {
+            foreach (WorkerAI w in All)
+            {
+                if (w == this || w == null || !w.TryGetClaim(out Vector3 theirs)) continue;
+                if (Utils.DistanceXZ(theirs, spot) >= dist) continue;
+                if (onlyFirst && !w.GoesBefore(this)) continue;
+                return true;
+            }
+            return false;
+        }
+
+        private bool GoesBefore(WorkerAI other)
+        {
+            ZDOID a = m_nview.GetZDO().m_uid, b = other.m_nview.GetZDO().m_uid;
+            return a.UserID != b.UserID ? a.UserID < b.UserID : a.ID < b.ID;
         }
 
         // ------------------------------------------------------------------ main loop

@@ -4,12 +4,12 @@ using UnityEngine;
 namespace VillageWorkers
 {
     /// <summary>
-    /// Lets the player point at things in the world for a villager: a bed, chests, or a work area
-    /// (a ring like the ward's that is sized with the mouse wheel).
+    /// Lets the player point at things in the world for a villager: a bed, chests, or a work area: a ring like the
+    /// ward's that is sized with the mouse wheel, or a box marked by two opposite corners.
     /// </summary>
     public static class WorldPicker
     {
-        public enum Mode { None, Bed, Chests, Area }
+        public enum Mode { None, Bed, Chests, Area, Box }
 
         public static Mode CurrentMode { get; private set; } = Mode.None;
         public static bool Active => CurrentMode != Mode.None;
@@ -21,6 +21,13 @@ namespace VillageWorkers
         private static Vector3 _areaPos;
         private static GameObject _marker;
         private static CircleProjector _circle;
+
+        // Box areas turn in the same steps as building pieces, so they line up with the buildings around them.
+        public const float BoxTurnStep = 22.5f;
+        public const float MinBoxSize = 2f, MaxBoxSize = 200f;
+        private static float _yaw;
+        private static Vector3? _corner;
+        private static BoxOutline _outline;
         private static int _finishedFrame = -10;
         private static int _startFrame;
         private static int _added;
@@ -38,8 +45,17 @@ namespace VillageWorkers
             if (mode == Mode.Area)
             {
                 TaskConfig t = Task(worker.Config);
-                _radius = t?.Area?.R ?? 20f;
+                _radius = t?.Area != null && !t.Area.IsBox ? t.Area.R : 20f;
                 CreateMarker();
+            }
+            if (mode == Mode.Box)
+            {
+                TaskConfig t = Task(worker.Config);
+                // Keep the way the old box was turned, or start square to where the player looks.
+                _yaw = t?.Area != null && t.Area.IsBox ? t.Area.A
+                    : Mathf.Repeat(Mathf.Round(Player.m_localPlayer.m_lookYaw.eulerAngles.y / BoxTurnStep) * BoxTurnStep, 360f);
+                _corner = null;
+                _outline = BoxOutline.Create();
             }
         }
 
@@ -81,7 +97,36 @@ namespace VillageWorkers
                     UI.Hint.Show($"Work area for <color=orange>{who}</color>",
                         $"Radius {_radius:0} m - [<color=yellow>Mouse wheel</color>] resize    [<color=yellow>E</color>] confirm    [<color=yellow>Esc</color>] cancel");
                     break;
+                case Mode.Box:
+                    UpdateBox();
+                    if (Time.frameCount > _startFrame + 1 && ZInput.GetButtonDown("Use") && Player.m_localPlayer.GetHoverObject() == null)
+                    {
+                        OnInteract(null);
+                        return;
+                    }
+                    if (_corner == null)
+                        UI.Hint.Show($"Work area for <color=orange>{who}</color>",
+                            "Look at one corner and press [<color=yellow>E</color>]    [<color=yellow>Mouse wheel</color>] turn    [<color=yellow>Esc</color>] cancel");
+                    else
+                        UI.Hint.Show($"Work area for <color=orange>{who}</color>",
+                            $"{BoxSize} m - look at the opposite corner and press [<color=yellow>E</color>]    [<color=yellow>Mouse wheel</color>] turn    [<color=yellow>Esc</color>] cancel");
+                    break;
             }
+        }
+
+        /// <summary>Used instead of where the player looks, when set (by the tests, which can't aim the camera precisely).</summary>
+        public static Vector3? AimOverride;
+
+        /// <summary>Where the player is looking, on the ground or a building.</summary>
+        private static Vector3 AimPoint()
+        {
+            if (AimOverride.HasValue) return AimOverride.Value;
+            Camera cam = GameCamera.instance != null ? GameCamera.instance.GetComponent<Camera>() : null;
+            Vector3 pos = Player.m_localPlayer.transform.position;
+            if (cam != null && Physics.Raycast(cam.transform.position, cam.transform.forward, out RaycastHit hit, 120f,
+                    LayerMask.GetMask("terrain", "Default", "static_solid", "piece")))
+                pos = hit.point;
+            return pos;
         }
 
         private static void UpdateArea()
@@ -89,11 +134,7 @@ namespace VillageWorkers
             float wheel = ZInput.GetMouseScrollWheel();
             if (Mathf.Abs(wheel) > 0.01f) _radius = Mathf.Clamp(_radius + Mathf.Sign(wheel) * (_radius > 30f ? 5f : 2f), 4f, 100f);
 
-            Camera cam = GameCamera.instance != null ? GameCamera.instance.GetComponent<Camera>() : null;
-            Vector3 pos = Player.m_localPlayer.transform.position;
-            if (cam != null && Physics.Raycast(cam.transform.position, cam.transform.forward, out RaycastHit hit, 120f,
-                    LayerMask.GetMask("terrain", "Default", "static_solid", "piece")))
-                pos = hit.point;
+            Vector3 pos = AimPoint();
             _areaPos = pos;
             if (_marker == null) CreateMarker();
             if (_marker != null)
@@ -102,6 +143,42 @@ namespace VillageWorkers
                 _circle.m_radius = _radius;
                 _circle.m_nrOfSegments = Mathf.Clamp(Mathf.RoundToInt(_radius * 2.5f), 16, 160);
             }
+        }
+
+        private static string BoxSize => _outline != null ? $"{_outline.Width:0} x {_outline.Length:0}" : "";
+
+        private static void UpdateBox()
+        {
+            float wheel = ZInput.GetMouseScrollWheel();
+            if (Mathf.Abs(wheel) > 0.01f) _yaw = Mathf.Repeat(_yaw + Mathf.Sign(wheel) * BoxTurnStep, 360f);
+            if (_outline == null) _outline = BoxOutline.Create();
+            if (_outline == null) return;
+
+            Vector3 aim = AimPoint();
+            if (_corner == null)
+            {
+                // Before the first corner: a small square where it would go.
+                _outline.Center = aim + Quaternion.Euler(0f, _yaw, 0f) * new Vector3(MinBoxSize, 0f, MinBoxSize) * 0.5f;
+                _outline.Width = _outline.Length = MinBoxSize;
+            }
+            else
+            {
+                BoxBetween(_corner.Value, aim, _yaw, out _outline.Center, out _outline.Width, out _outline.Length);
+            }
+            _outline.Yaw = _yaw;
+        }
+
+        /// <summary>The box with two opposite corners and its sides turned <paramref name="yaw"/> degrees, at least MinBoxSize across.</summary>
+        public static void BoxBetween(Vector3 corner, Vector3 opposite, float yaw, out Vector3 center, out float width, out float length)
+        {
+            Quaternion rot = Quaternion.Euler(0f, yaw, 0f);
+            Vector3 d = Quaternion.Inverse(rot) * (opposite - corner);
+            float x = Mathf.Clamp(Mathf.Abs(d.x), MinBoxSize, MaxBoxSize) * (d.x < 0f ? -1f : 1f);
+            float z = Mathf.Clamp(Mathf.Abs(d.z), MinBoxSize, MaxBoxSize) * (d.z < 0f ? -1f : 1f);
+            width = Mathf.Abs(x);
+            length = Mathf.Abs(z);
+            center = corner + rot * new Vector3(x, 0f, z) * 0.5f;
+            center.y = (corner.y + opposite.y) * 0.5f;
         }
 
         private static void CreateMarker()
@@ -180,6 +257,25 @@ namespace VillageWorkers
                     Finish(true);
                     return;
                 }
+                case Mode.Box:
+                {
+                    Vector3 aim = AimPoint();
+                    if (_corner == null)
+                    {
+                        _corner = aim;
+                        return;
+                    }
+                    TaskConfig t = Task(cfg);
+                    if (t != null)
+                    {
+                        BoxBetween(_corner.Value, aim, _yaw, out Vector3 center, out float width, out float length);
+                        t.Area = AreaDef.Box(center, width, length, _yaw);
+                        _worker.SendConfig(cfg);
+                        player.Message(MessageHud.MessageType.Center, $"Work area set ({t.Area.Describe()})");
+                    }
+                    Finish(true);
+                    return;
+                }
             }
         }
 
@@ -191,6 +287,9 @@ namespace VillageWorkers
             _finishedFrame = Time.frameCount;
             if (_marker != null) Object.Destroy(_marker);
             _marker = null;
+            if (_outline != null) Object.Destroy(_outline.gameObject);
+            _outline = null;
+            _corner = null;
             UI.Hint.Hide();
             if (reopen && w != null) UI.VillageWindow.Open(w);
         }

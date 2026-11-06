@@ -89,10 +89,17 @@ namespace VillageWorkers
         }
     }
 
+    /// <summary>
+    /// A work area: a circle (radius R), or a box W wide and L long, turned A degrees around the up axis.
+    /// For a box, R is the distance from the center to a corner, so range checks that only know circles still cover it.
+    /// </summary>
     public class AreaDef
     {
         public float X, Y, Z, R = 20f;
+        public float W, L, A;
         [JsonIgnore] public Vector3 Center => new Vector3(X, Y, Z);
+        [JsonIgnore] public bool IsBox => W > 0f && L > 0f;
+        [JsonIgnore] public Quaternion Rotation => Quaternion.Euler(0f, A, 0f);
 
         public AreaDef() { }
 
@@ -103,6 +110,26 @@ namespace VillageWorkers
             Z = c.z;
             R = r;
         }
+
+        public static AreaDef Box(Vector3 center, float width, float length, float yaw)
+        {
+            return new AreaDef(center, 0.5f * Mathf.Sqrt(width * width + length * length)) { W = width, L = length, A = yaw };
+        }
+
+        /// <summary>Whether a point lies inside, looking from above (height doesn't matter).</summary>
+        public bool Contains(Vector3 p)
+        {
+            Vector3 d = p - Center;
+            d.y = 0f;
+            if (!IsBox) return d.sqrMagnitude <= R * R;
+            Vector3 local = Quaternion.Inverse(Rotation) * d;
+            return Mathf.Abs(local.x) <= W * 0.5f && Mathf.Abs(local.z) <= L * 0.5f;
+        }
+
+        /// <summary>A point given in the area's own axes (x across the width, z along the length) relative to its center.</summary>
+        public Vector3 ToWorld(float x, float z) => Center + Rotation * new Vector3(x, 0f, z);
+
+        public string Describe() => IsBox ? $"{W:0} x {L:0} m box" : $"{R:0} m circle";
     }
 
     public class CraftOrder

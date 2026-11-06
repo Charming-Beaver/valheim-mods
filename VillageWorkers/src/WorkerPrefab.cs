@@ -237,6 +237,26 @@ namespace VillageWorkers
 
         public static bool IsCrop(string pickablePrefab) => CropToPlant.ContainsKey(pickablePrefab);
 
+        private static Dictionary<Piece, string> _saplingCrops;
+
+        /// <summary>Saplings that grow into a crop, with the item the crop gives (like "Carrot"), which a farming task's options list.</summary>
+        public static Dictionary<Piece, string> SaplingCrops
+        {
+            get
+            {
+                if (_saplingCrops == null && ZNetScene.instance != null)
+                {
+                    _saplingCrops = new Dictionary<Piece, string>();
+                    foreach (KeyValuePair<string, Piece> kv in CropToPlant)
+                    {
+                        Pickable crop = ZNetScene.instance.GetPrefab(kv.Key)?.GetComponent<Pickable>();
+                        if (crop != null && crop.m_itemPrefab != null && !_saplingCrops.ContainsKey(kv.Value)) _saplingCrops[kv.Value] = crop.m_itemPrefab.name;
+                    }
+                }
+                return _saplingCrops ?? new Dictionary<Piece, string>();
+            }
+        }
+
         public static List<GameObject> SmelterPrefabs
         {
             get
@@ -250,6 +270,7 @@ namespace VillageWorkers
         public static void ResetCaches()
         {
             _cropToPlant = null;
+            _saplingCrops = null;
             _smelterPrefabs = null;
         }
     }

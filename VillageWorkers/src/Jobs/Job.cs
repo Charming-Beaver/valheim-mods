@@ -99,7 +99,8 @@ namespace VillageWorkers.Jobs
 
         protected float StationRange => HasArea ? T.Area.R : Plugin.StationRadius.Value;
 
-        protected bool InRange(Vector3 p, float radius) => Utils.DistanceXZ(p, Center) <= radius;
+        /// <summary>Inside the task's area, or without one, within the radius of home.</summary>
+        protected bool InRange(Vector3 p, float radius) => HasArea ? T.Area.Contains(p) : Utils.DistanceXZ(p, Center) <= radius;
 
         // ------------------------------------------------------------------ tools
 

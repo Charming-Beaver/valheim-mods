@@ -59,7 +59,7 @@ namespace VillageWorkers.Jobs
                 if (reason == "no chest assigned") W.Ask("chest", "Where should I put my things? Please assign me a chest.");
                 return false;
             }
-            if (FindTarget(W.transform.position, MaxRadius) == null)
+            if (FindTarget(W.transform.position, MaxRadius) == null && !HasOtherWork())
             {
                 reason = $"nothing to {Verb.ToLower()} {(HasArea ? "in my area" : "nearby")}";
                 return false;
@@ -183,6 +183,13 @@ namespace VillageWorkers.Jobs
         protected virtual Phase OnCollected() => Phase.Search;
         protected virtual Phase AfterTick(float dt) => Phase.Search;
 
+        /// <summary>
+        /// Work that isn't a target in the world, such as a farmer planting empty ground, done when there's nothing left
+        /// to harvest. Starting it sets the phase.
+        /// </summary>
+        protected virtual bool HasOtherWork() => false;
+        protected virtual bool StartOtherWork() => false;
+
         private void Search()
         {
             if (NeedsTool)
@@ -230,6 +237,7 @@ namespace VillageWorkers.Jobs
             }
 
             Radius = StartRadius;
+            if (StartOtherWork()) return;
             if (W.HasLoot())
             {
                 P = Phase.Deliver;
@@ -596,6 +604,11 @@ namespace VillageWorkers.Jobs
 
     // ====================================================================== farming
 
+    /// <summary>
+    /// Harvests ripe crops and replants them. With an area set, also plants empty cultivated ground in it with seeds from
+    /// the chests, far enough apart for every crop to grow. Several farmers can share a field: each claims the spot it's
+    /// about to work on (see <see cref="WorkerAI.Claim"/>), and the others leave it alone.
+    /// </summary>
     public class FarmingJob : HarvestJob
     {
         public FarmingJob(WorkerAI w, TaskConfig t) : base(w, t) { }
@@ -606,16 +619,55 @@ namespace VillageWorkers.Jobs
         protected override float Reach => 1.4f;
         protected override int DeliverAtSlots => 6;
 
+        // Seconds a claim has to stand before picking or planting (see WorkerAI.ClaimAge).
+        private const float ClaimSettle = 1f;
+        // Seeds fetched at once, so planting a field doesn't mean a walk to the chest for every seed.
+        private const int SeedBatch = 10;
+        private const float PlantReach = 2f;
+        // Planting spots checked in one search at most, nearest first.
+        private const int MaxSpotChecks = 200;
+
         private float _actAt = -1f;
-        private Piece _replant;
-        private Vector3 _replantPos;
-        private Quaternion _replantRot;
+        // What to plant next: the same crop where one was just picked, or a new one on empty ground.
+        private Piece _plant;
+        private Vector3 _plantPos;
+        private Quaternion _plantRot;
+        private bool _newSpot;
+        private Pickable _picked;
+        private float _noSpotsUntil;
+        private float _seedWaitUntil;
+        private int _moveTries;
+        private readonly List<KeyValuePair<Vector3, float>> _badSpots = new List<KeyValuePair<Vector3, float>>();
 
         protected override Target FindTarget(Vector3 from, float radius)
         {
             return Nearest(WorldIndex.Current.Pickables, from, radius,
-                p => p != null && p.m_itemPrefab != null && !p.GetPicked() && WorkerPrefab.IsCrop(Utils.GetPrefabName(p.gameObject)) && T.Allows(p.m_itemPrefab.name),
+                p => p != null && p.m_itemPrefab != null && !p.GetPicked() && WorkerPrefab.IsCrop(Utils.GetPrefabName(p.gameObject)) && T.Allows(p.m_itemPrefab.name)
+                     && !W.ClaimedByOther(p.transform.position, 0.3f, false),
                 p => Items.Nice(p.m_itemPrefab.name).ToLower());
+        }
+
+        public override void Start()
+        {
+            base.Start();
+            _plant = null;
+            _actAt = -1f;
+        }
+
+        public override void Stop()
+        {
+            base.Stop();
+            _plant = null;
+            W.ReleaseClaim();
+        }
+
+        public override void Tick(float dt)
+        {
+            base.Tick(dt);
+            // Let the other farmers know which spot is taken.
+            if (_plant != null && (P == Phase.Collect || P == Phase.After)) W.Claim(_plantPos);
+            else if (Cur != null && (P == Phase.Approach || P == Phase.Work)) W.Claim(Cur.Pos);
+            else W.ReleaseClaim();
         }
 
         protected override R Work(float dt)
@@ -626,6 +678,9 @@ namespace VillageWorkers.Jobs
             W.Face(p.transform.position);
             if (_actAt < 0f)
             {
+                if (W.ClaimAge < ClaimSettle) return R.Running;
+                // Another farmer went for the same crop at the same moment, and goes first.
+                if (W.ClaimedByOther(p.transform.position, 0.3f, true)) return R.Failed;
                 W.Anim.SetTrigger("interact");
                 _actAt = Time.time + 0.6f / Plugin.WorkSpeed.Value;
                 return R.Running;
@@ -633,53 +688,227 @@ namespace VillageWorkers.Jobs
             if (Time.time < _actAt) return R.Running;
             _actAt = -1f;
 
-            WorkerPrefab.CropToPlant.TryGetValue(Utils.GetPrefabName(p.gameObject), out _replant);
-            _replantPos = p.transform.position;
-            _replantRot = p.transform.rotation;
+            WorkerPrefab.CropToPlant.TryGetValue(Utils.GetPrefabName(p.gameObject), out _plant);
+            _plantPos = p.transform.position;
+            _plantRot = p.transform.rotation;
+            _newSpot = false;
+            _picked = p;
+            _seedWaitUntil = 0f;
+            _moveTries = 0;
             p.m_nview.InvokeRPC("RPC_Pick", 0);
             W.RaiseSkill(Type, 0.6f);
-            Collector.Begin(_replantPos, 3f, 4f, 1f);
+            Collector.Begin(_plantPos, 3f, 4f, 1f);
             return R.Done;
         }
 
-        protected override Phase OnCollected() => _replant != null ? Phase.After : Phase.Search;
+        protected override Phase OnCollected() => _plant != null ? Phase.After : Phase.Search;
+
+        protected override bool HasOtherWork() => FindPlantSpot(out _, out _);
+
+        protected override bool StartOtherWork()
+        {
+            if (!FindPlantSpot(out Piece sapling, out Vector3 spot)) return false;
+            _plant = sapling;
+            _plantPos = spot;
+            _plantRot = Quaternion.Euler(0f, Random.Range(0f, 360f), 0f);
+            _newSpot = true;
+            _picked = null;
+            _seedWaitUntil = 0f;
+            _moveTries = 0;
+            P = Phase.After;
+            return true;
+        }
+
+        private static Piece.Requirement Seed(Piece sapling)
+        {
+            Piece.Requirement req = sapling != null && sapling.m_resources.Length > 0 ? sapling.m_resources[0] : null;
+            return req != null && req.m_resItem != null ? req : null;
+        }
 
         protected override Phase AfterTick(float dt)
         {
-            // Replant the field with the matching seed.
-            Piece.Requirement req = _replant != null && _replant.m_resources.Length > 0 ? _replant.m_resources[0] : null;
-            if (req == null || req.m_resItem == null)
+            // Plant the crop with its seed.
+            Piece.Requirement req = Seed(_plant);
+            if (req == null)
             {
-                _replant = null;
+                _plant = null;
                 return Phase.Search;
             }
             string seed = req.m_resItem.gameObject.name;
             int amount = Mathf.Max(1, req.m_amount);
-            if (Items.Count(W.Inv, seed) < amount)
+            int have = Items.Count(W.Inv, seed);
+            if (have < amount)
             {
-                R f = Fetcher.Tick(W, AllChests, new Dictionary<string, int> { { seed, amount } }, Items.Nice(seed));
+                // A batch for planting a field. For replanting just one, so a farmer sharing the field with others
+                // doesn't take seeds they need to replant what they pick.
+                int want = _newSpot ? Mathf.Min(amount * SeedBatch, have + Chests.CountAvailable(AllChests, seed)) : amount;
+                R f = want >= amount ? Fetcher.Tick(W, AllChests, new Dictionary<string, int> { { seed, want } }, Items.Nice(seed)) : R.Failed;
                 if (f == R.Running) return Phase.After;
-                if (f == R.Failed)
+                if (Items.Count(W.Inv, seed) < amount)
                 {
-                    W.Ask("seeds_" + seed, $"I'm out of {Items.Nice(seed)} to replant the field.");
-                    _replant = null;
+                    // The seeds are there, but the chest can't be reached for a moment (another villager in the way
+                    // makes the fetcher give up on it for a while): keep the spot and try again.
+                    if (Chests.CountAvailable(AllChests, seed) >= amount)
+                    {
+                        if (_seedWaitUntil <= 0f) _seedWaitUntil = Time.time + 40f;
+                        if (Time.time < _seedWaitUntil)
+                        {
+                            W.SetStatus("Waiting to get " + Items.Nice(seed));
+                            return Phase.After;
+                        }
+                    }
+                    else
+                    {
+                        W.Ask("seeds_" + seed, $"I'm out of {Items.Nice(seed)} to {(_newSpot ? "plant" : "replant")} the field.");
+                    }
+                    Plugin.Debug($"{W.GetName()} has no {seed} to plant at {_plantPos}");
+                    // Don't come straight back to the same spot.
+                    if (_newSpot) _noSpotsUntil = Time.time + 15f;
+                    _plant = null;
                     return Phase.Search;
                 }
             }
+            _seedWaitUntil = 0f;
 
-            W.SetStatus("Replanting " + Items.Nice(seed));
-            R m = W.MoveNear(_replantPos, 1.3f, false);
+            W.SetStatus((_newSpot ? "Planting " : "Replanting ") + Items.Nice(seed));
+            // From a couple of meters, like a player: in a planted field the path finder often stops short of the spot.
+            R m = W.MoveNear(_plantPos, PlantReach, false);
             if (m == R.Running) return Phase.After;
-            if (m == R.Done)
+            if (m == R.Failed)
             {
-                W.Face(_replantPos);
-                W.Anim.SetTrigger("interact");
-                GameObject planted = Object.Instantiate(_replant.gameObject, _replantPos, _replantRot);
-                _replant.m_placeEffect.Create(_replantPos, _replantRot, planted.transform);
-                Items.Remove(W.Inv, seed, amount);
+                Plugin.Debug($"{W.GetName()} can't get to {_plantPos} to plant");
+                // A gap in a planted field is worse than a skipped new spot: try a few more times (someone may have
+                // been in the way).
+                if (!_newSpot && ++_moveTries < 3) return Phase.After;
+                if (_newSpot) _badSpots.Add(new KeyValuePair<Vector3, float>(_plantPos, Time.time + 300f));
+                _plant = null;
+                return Phase.Search;
             }
-            _replant = null;
+            if (W.ClaimAge < ClaimSettle) return Phase.After;
+
+            Plant plant = _plant.GetComponent<Plant>();
+            bool taken = _newSpot
+                ? W.ClaimedByOther(_plantPos, PlantSpace.Spacing(plant, plant) - PlantSpace.Tolerance, true) || !PlantSpace.Free(_plantPos, plant, _picked)
+                // Replanting where a crop just grew: only make sure nobody replanted it already.
+                : W.ClaimedByOther(_plantPos, 0.3f, true) || PlantSpace.Occupied(_plantPos, _picked);
+            if (taken)
+            {
+                Plugin.Debug($"{W.GetName()} finds {_plantPos} taken");
+                if (_newSpot) _badSpots.Add(new KeyValuePair<Vector3, float>(_plantPos, Time.time + 60f));
+                _plant = null;
+                return Phase.Search;
+            }
+
+            W.Face(_plantPos);
+            W.Anim.SetTrigger("interact");
+            GameObject planted = Object.Instantiate(_plant.gameObject, _plantPos, _plantRot);
+            _plant.m_placeEffect.Create(_plantPos, _plantRot, planted.transform);
+            Items.Remove(W.Inv, seed, amount);
+            if (_newSpot)
+            {
+                W.RaiseSkill(Type, 0.3f);
+                W.LogEvent("planted " + Items.Nice(seed));
+            }
+            _plant = null;
             return Phase.Search;
+        }
+
+        // ------------------------------------------------------------------ planting new crops
+
+        /// <summary>The nearest empty spot in the area where one of the crops this task may grow can be planted, with seeds to hand.</summary>
+        private bool FindPlantSpot(out Piece sapling, out Vector3 spot)
+        {
+            sapling = null;
+            spot = Vector3.zero;
+            if (!HasArea || Time.time < _noSpotsUntil) return false;
+            _badSpots.RemoveAll(kv => Time.time > kv.Value);
+            Vector3 from = W.transform.position;
+            float best = float.MaxValue;
+            foreach (Piece p in PlantableSaplings())
+            {
+                if (!NearestFreeSpot(p.GetComponent<Plant>(), from, out Vector3 s)) continue;
+                float d = Utils.DistanceXZ(from, s);
+                if (d >= best) continue;
+                best = d;
+                sapling = p;
+                spot = s;
+            }
+            // Nothing to plant: don't search the whole field again for a while.
+            if (sapling == null)
+            {
+                _noSpotsUntil = Time.time + 15f;
+                Plugin.Debug($"{W.GetName()} finds nothing to plant");
+            }
+            return sapling != null;
+        }
+
+        private static bool IsFood(ItemDrop item) => item.m_itemData.m_shared.m_food > 0f || item.m_itemData.m_shared.m_foodStamina > 0f;
+
+        private IEnumerable<Piece> PlantableSaplings()
+        {
+            foreach (KeyValuePair<Piece, string> kv in WorkerPrefab.SaplingCrops)
+            {
+                Plant plant = kv.Key.GetComponent<Plant>();
+                if (plant == null || !(plant.m_needCultivatedGround || kv.Key.m_cultivatedGroundOnly) || !T.Allows(kv.Value)) continue;
+                Piece.Requirement req = Seed(kv.Key);
+                if (req == null) continue;
+                string seed = req.m_resItem.gameObject.name;
+                // Planting a carrot grows a seed carrot: don't plant food that's the harvest of another crop unless the
+                // task's options ask for that crop. Seeds, and crops planted with their own harvest (barley, Jotun puffs), are fine.
+                if (T.Filter.Count == 0 && IsFood(req.m_resItem) && WorkerPrefab.SaplingCrops.Any(o => o.Key != kv.Key && o.Value == seed)) continue;
+                // Seeds for replanting what's ripe in the field come first: keep one for every ripe crop, and one for every
+                // other farmer at work here (who may be about to replant).
+                int amount = Mathf.Max(1, req.m_amount);
+                int ripe = WorldIndex.Current.Pickables.Count(p => p != null && !p.GetPicked() && T.Area.Contains(p.transform.position)
+                                                                   && WorkerPrefab.CropToPlant.TryGetValue(Utils.GetPrefabName(p.gameObject), out Piece s) && s == kv.Key);
+                int working = WorkerAI.All.Count(w => w != W && w.TryGetClaim(out Vector3 c) && T.Area.Contains(c));
+                if (Items.Count(W.Inv, seed) + Chests.CountAvailable(AllChests, seed) >= amount * (1 + ripe + working)) yield return kv.Key;
+            }
+        }
+
+        /// <summary>
+        /// Lays a grid over the area, as far apart as this crop needs (lined up with a box's sides), and returns the nearest
+        /// point on cultivated ground where it has room to grow and no other farmer is at work.
+        /// </summary>
+        private bool NearestFreeSpot(Plant plant, Vector3 from, out Vector3 spot)
+        {
+            spot = Vector3.zero;
+            AreaDef area = T.Area;
+            float step = PlantSpace.Spacing(plant, plant);
+            float halfW = area.IsBox ? area.W * 0.5f : area.R;
+            float halfL = area.IsBox ? area.L * 0.5f : area.R;
+            int nx = Mathf.Max(1, Mathf.FloorToInt(2f * halfW / step));
+            int nz = Mathf.Max(1, Mathf.FloorToInt(2f * halfL / step));
+            // Centered, so the leftover margin is the same on both sides.
+            float x0 = -(nx - 1) * step * 0.5f, z0 = -(nz - 1) * step * 0.5f;
+
+            List<KeyValuePair<float, Vector3>> candidates = new List<KeyValuePair<float, Vector3>>();
+            for (int i = 0; i < nx; i++)
+            {
+                for (int j = 0; j < nz; j++)
+                {
+                    Vector3 p = area.ToWorld(x0 + i * step, z0 + j * step);
+                    if (!area.Contains(p) || !PlantSpace.Cultivated(p)) continue;
+                    if (_badSpots.Any(kv => Utils.DistanceXZ(kv.Key, p) < 0.3f)) continue;
+                    candidates.Add(new KeyValuePair<float, Vector3>(Utils.DistanceXZ(from, p), p));
+                }
+            }
+            candidates.Sort((a, b) => a.Key.CompareTo(b.Key));
+            int checks = 0;
+            foreach (KeyValuePair<float, Vector3> c in candidates)
+            {
+                Vector3 p = c.Value;
+                if (W.ClaimedByOther(p, step - PlantSpace.Tolerance, false)) continue;
+                p.y = ZoneSystem.instance.GetGroundHeight(p);
+                if (!PlantSpace.Grows(plant, p)) continue;
+                if (PlantSpace.Free(p, plant))
+                {
+                    spot = p;
+                    return true;
+                }
+                if (++checks >= MaxSpotChecks) break;
+            }
+            return false;
         }
     }
 }
