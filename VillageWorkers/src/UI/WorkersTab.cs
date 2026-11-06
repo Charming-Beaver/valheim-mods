@@ -214,7 +214,7 @@ namespace VillageWorkers.UI
 
         private static string AreaText(TaskConfig t)
         {
-            if (t.Area != null) return $"Area: {t.Area.R:0} m circle";
+            if (t.Area != null) return $"Area: {t.Area.Describe()}" + (t.Type == JobType.Farming ? ", planting empty cultivated ground" : "");
             bool station = t.Type == JobType.Crafting || t.Type == JobType.Smelting || t.Type == JobType.Cooking ||
                            t.Type == JobType.Brewing || t.Type == JobType.Fueling;
             return station ? $"Area: within {Plugin.StationRadius.Value:0} m of home" : $"Area: automatic (starts near home, searches up to {Plugin.MaxSearchRadius.Value:0} m)";
@@ -287,7 +287,34 @@ namespace VillageWorkers.UI
                 Btn2("Own chests", () => WorldPicker.Begin(ai, WorldPicker.Mode.Chests, index), 110, true, "Chests only for this task. When they are full, the villager moves on to the next task.");
             }
             Btn2("Auto area", () => Send(e, c => c.Tasks[index].Area = null), 100, t.Area != null, "Search automatically around home");
-            Btn2("Set area", () => WorldPicker.Begin(ai, WorldPicker.Mode.Area, index), 100, true, "Mark a circle in the world to work in");
+            Btn2("Set area", () => ShowAreaChoice(ai, index), 100, true,
+                "Mark a circle or a box in the world to work in" + (t.Type == JobType.Farming ? ". Farmers also plant empty cultivated ground in it." : ""));
+        }
+
+        private static void ShowAreaChoice(WorkerAI ai, int index)
+        {
+            RectTransform content = Popup("Work area", 640, 236);
+            void Choice(string title, string text, float x, WorldPicker.Mode mode)
+            {
+                RectTransform cell = UIKit.Rect(content, mode.ToString()).TopLeft(x, 4, 290, 150);
+                Image bg = cell.gameObject.AddComponent<Image>();
+                bg.color = new Color(0, 0, 0, 0.3f);
+                Button b = cell.gameObject.AddComponent<Button>();
+                b.targetGraphic = bg;
+                ColorBlock cb = b.colors;
+                cb.highlightedColor = new Color(1f, 0.8f, 0.5f, 1f);
+                b.colors = cb;
+                b.onClick.AddListener(() =>
+                {
+                    ClosePopup();
+                    WorldPicker.Begin(ai, mode, index);
+                });
+                UIKit.Text(cell, title, 20, UIKit.Orange).rectTransform.TopLeft(10, 6, 270, 26);
+                UIKit.Text(cell, text, 15, UIKit.Parchment).Wrap().rectTransform.TopLeft(10, 36, 270, 110);
+            }
+            Choice("Circle", "Look at the middle and size it with the mouse wheel.", 0, WorldPicker.Mode.Area);
+            Choice("Box", "Look at one corner, then the opposite one. The mouse wheel turns it, in the same steps as building pieces.", 310,
+                WorldPicker.Mode.Box);
         }
 
         private static void Swap<T>(List<T> list, int a, int b)

@@ -6,3 +6,4 @@ obj/
 dist/
 StorageMaster/images/_unused/
 tests/.mods/
+tests/.server/

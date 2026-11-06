@@ -72,8 +72,8 @@ namespace VillageWorkers
         [HarmonyPatch(typeof(GameCamera), nameof(GameCamera.UpdateCamera)), HarmonyPostfix]
         private static void CameraPost(GameCamera __instance)
         {
-            // The mouse wheel sizes the work area while placing it.
-            if (WorldPicker.Active && WorldPicker.CurrentMode == WorldPicker.Mode.Area) __instance.m_distance = _camDistance;
+            // The mouse wheel sizes (or turns) the work area while placing it.
+            if (WorldPicker.CurrentMode == WorldPicker.Mode.Area || WorldPicker.CurrentMode == WorldPicker.Mode.Box) __instance.m_distance = _camDistance;
         }
 
         // Show who uses a bed or a chest.

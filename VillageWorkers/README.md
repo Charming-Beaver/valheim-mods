@@ -21,7 +21,8 @@ A BepInEx mod for Valheim that adds villagers: viking NPCs you meet in the world
 | Villager | 1-8 | Give the hotbar item |
 | Anywhere | F7 | Village window (configurable) |
 | Choosing a bed or chests | E / Esc | Select / finish |
-| Choosing an area | Mouse wheel, E, Esc | Resize, confirm, cancel |
+| Choosing a circle area | Mouse wheel, E, Esc | Resize, confirm, cancel |
+| Choosing a box area | E, Mouse wheel, Esc | Mark a corner, then the opposite one; turn; cancel |
 
 ## Tasks
 
@@ -30,7 +31,7 @@ A BepInEx mod for Valheim that adds villagers: viking NPCs you meet in the world
 | Woodcutting | Fells trees, splits logs, clears stumps | Axe (the tool tier must be high enough for the wood) |
 | Mining | Rocks, copper, tin, silver, obsidian and so on | Pickaxe (tier high enough) |
 | Gathering | Berries, mushrooms, flint, stones, branches, thistle, honey, sap | - |
-| Farming | Harvests ripe crops and replants them with seeds from the chests | Seeds in a chest |
+| Farming | Harvests ripe crops and replants them with seeds from the chests. With an area set, also plants the empty cultivated ground in it | Seeds in a chest |
 | Hunting | Hunts deer, boar, necks and similar, then brings the loot home | A weapon (a bow works best against deer) |
 | Crafting | Keeps a stock of any recipe ("keep 20 arrows") at the right station | Materials in the chests and the station nearby |
 | Smelting & kilns | Fills smelters, charcoal kilns, blast furnaces, windmills, spinning wheels and eitr refineries with ore and fuel, then collects the output | Ore and fuel in the chests |
@@ -41,7 +42,8 @@ A BepInEx mod for Valheim that adds villagers: viking NPCs you meet in the world
 
 ### Task settings
 
-- **Set area / Auto area.** Pick a circle in the world to work in. Without an area, outdoor tasks start searching close to the bed and widen the search step by step, up to `MaxSearchRadius`. Station tasks use stations within `StationRadius` of the bed.
+- **Set area / Auto area.** Mark the part of the world to work in: a circle (look at its middle and size it with the mouse wheel) or a box (look at one corner and press **E**, then at the opposite corner). The mouse wheel turns a box in the same steps as building pieces, so it lines up with your fences and buildings. Without an area, outdoor tasks start searching close to the bed and widen the search step by step, up to `MaxSearchRadius`. Station tasks use stations within `StationRadius` of the bed.
+- **Farming fields.** A farmer with an area also plants the empty cultivated ground in it, with the seeds in their chests (only the crops chosen in Options, if any). They don't plant your carrots, turnips or onions to grow seeds from them, unless you choose that crop in Options. Crops go as close together as lets every one of them grow, also once they're grown, and not under roofs or trees. Several farmers can share a field, and their areas can overlap: they never go for the same crop or plant on the same spot.
 - **Own chests.** Give a task its own chests. When they are full, the villager moves on to the next task. Tasks without their own chests use the villager's chests. Materials can be taken from any of the villager's chests.
 - **Options.** Limit a task to certain things, such as only fine wood, only copper, only deer, or only the charcoal kiln. You can also edit crafting orders here.
 - **Priority.** Use ▲ / ▼ to change the order, the checkbox to pause a task, and X to remove it.

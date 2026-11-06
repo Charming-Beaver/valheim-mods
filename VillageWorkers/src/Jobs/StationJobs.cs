@@ -55,6 +55,7 @@ namespace VillageWorkers.Jobs
 
         private float Range => _t.Area != null ? _t.Area.R : Plugin.StationRadius.Value;
         private Vector3 Center => _t.Area != null ? _t.Area.Center : _w.Home;
+        private bool InArea(Vector3 p) => _t.Area != null ? _t.Area.Contains(p) : Utils.DistanceXZ(p, Center) <= Range;
 
         public static Dictionary<string, int> Materials(Recipe recipe)
         {
@@ -82,7 +83,7 @@ namespace VillageWorkers.Jobs
             bool any = false;
             foreach (CraftingStation s in WorldIndex.CraftingStations)
             {
-                if (s == null || s.m_name != need.m_name || Utils.DistanceXZ(s.transform.position, Center) > Range) continue;
+                if (s == null || s.m_name != need.m_name || !InArea(s.transform.position)) continue;
                 any = true;
                 if (s.GetLevel() < recipe.m_minStationLevel)
                 {
