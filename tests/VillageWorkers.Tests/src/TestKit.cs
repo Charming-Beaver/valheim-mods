@@ -185,6 +185,13 @@ namespace VillageWorkers.Tests
         /// <summary>Gives a villager a farming task in the area, as the village window does.</summary>
         public static void Farming(WorkerAI w, AreaDef area, params string[] only)
         {
+            Put(w.Inv, "Cultivator", 1);
+            FarmingWithoutCultivator(w, area, only);
+        }
+
+        /// <summary>A farming task for a villager who has no cultivator yet.</summary>
+        public static void FarmingWithoutCultivator(WorkerAI w, AreaDef area, params string[] only)
+        {
             WorkerConfig cfg = w.Config.Clone();
             cfg.Tasks.Add(new TaskConfig { Type = JobType.Farming, Area = area, Filter = only.ToList() });
             w.NView.GetZDO().Set(WorkerAI.K_Cfg, cfg.ToJson());

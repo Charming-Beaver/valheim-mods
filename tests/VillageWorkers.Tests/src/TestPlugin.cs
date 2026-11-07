@@ -112,7 +112,9 @@ namespace VillageWorkers.Tests
             var others = Chainloader.PluginInfos.Values.Where(p => p.Metadata.GUID != Plugin.Guid && p.Instance?.GetType() != typeof(TestPlugin)).ToList();
             if (others.Count > 0) Write("WITH " + string.Join(", ", others.Select(p => $"{p.Metadata.Name} {p.Metadata.Version} ({p.Metadata.GUID})")));
 
-            var tests = FindTests();
+            // run-tests.ps1 -Only: just the tests with that in their name.
+            string only = Opt("only");
+            var tests = FindTests().Where(t => only == null || $"{t.DeclaringType.Name}.{t.Name}".IndexOf(only, StringComparison.OrdinalIgnoreCase) >= 0).ToList();
             Write($"RUNNING {tests.Count} tests");
             int passed = 0, failed = 0, skipped = 0;
             foreach (MethodInfo test in tests)

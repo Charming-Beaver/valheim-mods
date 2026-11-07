@@ -173,6 +173,75 @@ namespace VillageWorkers.Tests
             yield return TestKit.WaitUntil(() => Plants() >= 4, "seed carrots to be planted", 90f, () => TestKit.Describe(w, chest));
         }
 
+        /// <summary>
+        /// The farmer picks every ripe crop before replanting, then stores the harvest and takes the seeds in one trip:
+        /// not a walk to the chest for every crop.
+        /// </summary>
+        [Test]
+        public static IEnumerator HarvestsEverythingBeforeReplanting()
+        {
+            Farm farm = null;
+            yield return Farm.Create(Vector3.zero, 6f, 6f, 0f, f => farm = f);
+            List<Pickable> crops = farm.PlantCrops(3);
+            // Far enough that a trip to it shows.
+            Container chest = TestKit.SpawnChest(farm.Area.ToWorld(-10f, 0f));
+            TestKit.Put(chest.GetInventory(), farm.Seed, crops.Count);
+            WorkerAI w = null;
+            yield return TestKit.Villager(farm.Area.ToWorld(-2f, -4f), null, chest, x => w = x);
+            yield return TestKit.Indexed(crops);
+            TestKit.Farming(w, farm.Area);
+
+            int visits = 0, ripeWhenReplanting = -1;
+            bool atChest = false;
+            float end = Time.realtimeSinceStartup + 180f;
+            while (TestKit.Saplings(farm).Count < crops.Count)
+            {
+                Assert.True(Time.realtimeSinceStartup < end, $"Timed out waiting for the field to be replanted ({TestKit.Describe(w, chest)})");
+                float d = Utils.DistanceXZ(w.transform.position, chest.transform.position);
+                if (!atChest && d < 2.5f) visits++;
+                atChest = d < 2.5f || (atChest && d < 4f);
+                if (ripeWhenReplanting < 0 && TestKit.Saplings(farm).Count > 0) ripeWhenReplanting = TestKit.Crops(farm).Count;
+                yield return null;
+            }
+            Assert.Equal(0, ripeWhenReplanting, "Ripe crops left when the first one was replanted");
+            Assert.True(visits <= 1, $"The farmer went to the chest {visits} times to replant {crops.Count} crops");
+            yield return TestKit.WaitUntil(() => TestKit.Count(chest.GetInventory(), CropItem(farm)) >= crops.Count,
+                "the harvest to be stored in the chest", 30f, () => TestKit.Describe(w, chest));
+            TestKit.AssertAllGrow(TestKit.Saplings(farm), "Replanted");
+        }
+
+        /// <summary>
+        /// Planting takes a cultivator, as for a player: without one the farmer leaves the field alone. Given one in a
+        /// chest, they take it, use it and wear it.
+        /// </summary>
+        [Test]
+        public static IEnumerator PlantingTakesACultivator()
+        {
+            Farm farm = null;
+            // Room around the crops for new ones.
+            yield return Farm.Create(Vector3.zero, 6f, 6f, 0f, f => farm = f);
+            List<Pickable> crops = farm.PlantCrops(2);
+            Container chest = TestKit.SpawnChest(farm.Area.ToWorld(-5f, 0f));
+            TestKit.Put(chest.GetInventory(), farm.Seed, 20);
+            WorkerAI w = null;
+            yield return TestKit.Villager(farm.Area.ToWorld(-4f, 2f), null, chest, x => w = x);
+            yield return TestKit.Indexed(crops);
+            TestKit.FarmingWithoutCultivator(w, farm.Area);
+
+            yield return new WaitForSeconds(15f);
+            Assert.Equal(crops.Count, TestKit.Crops(farm).Count, $"Crops left without a cultivator ({w.GetStatus()})");
+            Assert.Equal(0, TestKit.Saplings(farm).Count, "Crops planted without a cultivator");
+
+            TestKit.Put(chest.GetInventory(), "Cultivator", 1);
+            float full = ObjectDB.instance.GetItemPrefab("Cultivator").GetComponent<ItemDrop>().m_itemData.GetMaxDurability();
+            yield return TestKit.WaitUntil(() => TestKit.Crops(farm).Count == 0 && TestKit.Saplings(farm).Count > crops.Count,
+                "the farmer to take the cultivator, harvest and plant", 150f,
+                () => TestKit.Describe(w, chest) + "; " + TestKit.ExplainEmptySpots(farm, TestKit.Saplings(farm)));
+            ItemDrop.ItemData cultivator = w.Inv.GetAllItems().FirstOrDefault(i => i.m_dropPrefab?.name == "Cultivator");
+            Assert.True(cultivator != null, "The farmer carries the cultivator");
+            Assert.True(cultivator.m_durability < full, $"The cultivator wore down from planting ({cultivator.m_durability:0.0} of {full:0.0})");
+        }
+
         /// <summary>When two villagers claim the same spot at the same moment, exactly one of them gives way.</summary>
         [Test]
         public static IEnumerator SameMomentClaimsLetExactlyOneGo()
@@ -183,13 +252,13 @@ namespace VillageWorkers.Tests
             // Let them start (which clears any claim an earlier owner left).
             yield return new WaitForSeconds(1f);
             Vector3 spot = TestKit.Ahead(10f);
-            a.Claim(spot);
-            b.Claim(spot + Vector3.right * 0.1f);
+            a.SetClaims(new List<Vector3> { spot });
+            b.SetClaims(new List<Vector3> { TestKit.Ahead(30f), spot + Vector3.right * 0.1f });
             yield return null;
             Assert.True(a.ClaimedByOther(spot, 0.3f, false) && b.ClaimedByOther(spot, 0.3f, false), "Each sees the other's claim");
             bool aGivesWay = a.ClaimedByOther(spot, 0.3f, true), bGivesWay = b.ClaimedByOther(spot, 0.3f, true);
             Assert.True(aGivesWay != bGivesWay, $"Exactly one gives way (the first: {aGivesWay}, the second: {bGivesWay})");
-            a.ReleaseClaim();
+            a.ReleaseClaims();
             yield return null;
             Assert.True(!b.ClaimedByOther(spot, 0.3f, false), "A released claim is free again");
             Assert.True(!a.ClaimedByOther(TestKit.Ahead(20f), 0.3f, false), "Claims only cover their spot");

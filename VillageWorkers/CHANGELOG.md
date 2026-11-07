@@ -11,4 +11,6 @@
 - Guides for singleplayer, hosting, dedicated servers and joining a server in the README
 
 ### Changed
+- **Breaking:** farmers need a cultivator, like a player planting. They ask for one, take one from their chests, wear it out and have it mended like other tools. A farmer without one stops farming until given one
+- Farmers pick all the ripe crops first, then store the harvest and take the seeds in one trip to the chest, and replant them all, instead of walking to the chest for every crop
 - `vw_spawn` is a cheat command like the game's `spawn`: type `devcommands` first, and on a server only admins can use it

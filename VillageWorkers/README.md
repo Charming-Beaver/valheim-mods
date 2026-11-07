@@ -31,7 +31,7 @@ A BepInEx mod for Valheim that adds villagers: viking NPCs you meet in the world
 | Woodcutting | Fells trees, splits logs, clears stumps | Axe (the tool tier must be high enough for the wood) |
 | Mining | Rocks, copper, tin, silver, obsidian and so on | Pickaxe (tier high enough) |
 | Gathering | Berries, mushrooms, flint, stones, branches, thistle, honey, sap | - |
-| Farming | Harvests ripe crops and replants them with seeds from the chests. With an area set, also plants the empty cultivated ground in it | Seeds in a chest |
+| Farming | Picks the ripe crops, then stores the harvest, takes the seeds from the chests and replants them all. With an area set, also plants the empty cultivated ground in it | A cultivator, and seeds in a chest |
 | Hunting | Hunts deer, boar, necks and similar, then brings the loot home | A weapon (a bow works best against deer) |
 | Crafting | Keeps a stock of any recipe ("keep 20 arrows") at the right station | Materials in the chests and the station nearby |
 | Smelting & kilns | Fills smelters, charcoal kilns, blast furnaces, windmills, spinning wheels and eitr refineries with ore and fuel, then collects the output | Ore and fuel in the chests |

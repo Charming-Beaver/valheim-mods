@@ -332,7 +332,7 @@ namespace VillageWorkers
                 case JobType.Woodcutting: return "Chops trees, logs and stumps. Needs an axe.";
                 case JobType.Mining: return "Mines rocks and ore deposits. Needs a pickaxe.";
                 case JobType.Gathering: return "Picks berries, mushrooms, flint, stones, branches, honey and sap.";
-                case JobType.Farming: return "Harvests ripe crops and replants them with seeds from the chests.";
+                case JobType.Farming: return "Harvests and replants crops, and plants empty fields in its area. Needs a cultivator.";
                 case JobType.Hunting: return "Hunts animals and brings home the loot. Needs a weapon.";
                 case JobType.Crafting: return "Crafts items at workbenches, forges, cauldrons etc. to keep a stock.";
                 case JobType.Smelting: return "Fills smelters, kilns, furnaces, windmills and spinning wheels and collects the output.";

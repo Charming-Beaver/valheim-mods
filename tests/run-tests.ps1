@@ -48,6 +48,8 @@ param(
     [switch]$Server,
     # A small window and the lowest graphics, for when memory is short.
     [switch]$Small,
+    # Only the tests whose name (Class.Method) contains this, for test projects that support it.
+    [string]$Only,
     # Found through Steam when left out.
     [string]$ValheimDir,
     # The dedicated server's folder for -Server; found through Steam when left out.
@@ -182,13 +184,14 @@ foreach ($package in $packages) {
 if (Test-Path $results) { Remove-Item $results }
 if (Test-Path $screenshots) { Remove-Item -Recurse $screenshots }
 $setup = if ($Server) { 'server' } elseif ($Hosting) { 'host' } else { $null }
-if (-not $setup) {
+if (-not $setup -and -not $Only) {
     Set-Content -Path $marker -Value $(if ($Play) { 'play' } else { 'Run the tests on the next start' }) -Encoding utf8
 }
 else {
     # Settings for the test plugin, one key=value per line.
-    $options = [ordered]@{ mode = $(if ($Play) { 'play' } else { 'test' }); setup = $setup; password = $serverPassword }
+    $options = [ordered]@{ mode = $(if ($Play) { 'play' } else { 'test' }); setup = $(if ($setup) { $setup } else { 'singleplayer' }); password = $serverPassword }
     if ($Server) { $options += [ordered]@{ host = '127.0.0.1'; port = $ServerPort; 'server-dir' = $ServerDir } }
+    if ($Only) { $options['only'] = $Only }
     Set-Content -Path $marker -Value ($options.GetEnumerator() | ForEach-Object { "$($_.Key)=$($_.Value)" }) -Encoding utf8
 }
 

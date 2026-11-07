@@ -29,7 +29,7 @@ namespace VillageWorkers
         public const string K_Init = "vw_init";
         public const string K_Sleep = "vw_sleep";
         public const string K_Job = "vw_job";
-        public const string K_Claim = "vw_claim";
+        public const string K_Claims = "vw_claims";
 
         public Humanoid Human { get; private set; }
         public Container Box { get; private set; }
@@ -202,8 +202,9 @@ namespace VillageWorkers
             _nextEval = 0f;
             _wasOwner = true;
             // Whatever the last owner was about to do is forgotten with the job.
-            _claim = Vector3.zero;
-            m_nview.GetZDO().Set(K_Claim, Vector3.zero);
+            _claims.Clear();
+            _claimedAt.Clear();
+            m_nview.GetZDO().Set(K_Claims, new byte[0]);
             ReloadBox();
             EnsureEquipment();
         }
@@ -357,33 +358,57 @@ namespace VillageWorkers
 
         // ------------------------------------------------------------------ claimed spots
 
-        private Vector3 _claim;
-        private float _claimedAt;
+        private readonly List<Vector3> _claims = new List<Vector3>();
+        private readonly Dictionary<Vector3, float> _claimedAt = new Dictionary<Vector3, float>();
+        private static readonly List<Vector3> NoClaims = new List<Vector3>();
+        // The claims as read from the ZDO, kept until it changes.
+        private byte[] _claimsRead;
+        private readonly List<Vector3> _claimsSeen = new List<Vector3>();
 
         /// <summary>
-        /// Marks the spot this villager is about to work on (a crop to pick, ground to plant), so others leave it alone.
-        /// It's kept in the ZDO, so villagers run by other players' games see it too.
+        /// Marks the spots this villager is about to work on (crops to pick, ground to plant), so others leave them alone.
+        /// They're kept in the ZDO, so villagers run by other players' games see them too.
         /// </summary>
-        public void Claim(Vector3 spot)
+        public void SetClaims(List<Vector3> spots)
         {
-            if (!m_nview.IsOwner() || spot == _claim) return;
-            _claim = spot;
-            _claimedAt = Time.time;
-            m_nview.GetZDO().Set(K_Claim, spot);
+            if (!m_nview.IsOwner()) return;
+            if (spots.Count == _claims.Count && spots.All(_claimedAt.ContainsKey)) return;
+            float now = Time.time;
+            var times = new Dictionary<Vector3, float>();
+            foreach (Vector3 spot in spots) times[spot] = _claimedAt.TryGetValue(spot, out float t) ? t : now;
+            _claimedAt.Clear();
+            foreach (KeyValuePair<Vector3, float> kv in times) _claimedAt[kv.Key] = kv.Value;
+            _claims.Clear();
+            _claims.AddRange(spots);
+            ZPackage pkg = new ZPackage();
+            pkg.Write(spots.Count);
+            foreach (Vector3 spot in spots) pkg.Write(spot);
+            m_nview.GetZDO().Set(K_Claims, pkg.GetArray());
         }
 
-        public void ReleaseClaim() => Claim(Vector3.zero);
+        public void ReleaseClaims() => SetClaims(NoClaims);
 
         /// <summary>
-        /// Seconds since the current claim was made. Acting only once it's a second old gives a claim made at the same
+        /// Seconds since a spot was claimed. Acting only once a claim is a second old gives a claim made at the same
         /// moment by a villager in another player's game the time to arrive, so <see cref="ClaimedByOther"/> sees it.
         /// </summary>
-        public float ClaimAge => _claim == Vector3.zero ? 0f : Time.time - _claimedAt;
+        public float ClaimAge(Vector3 spot) => _claimedAt.TryGetValue(spot, out float t) ? Time.time - t : 0f;
 
-        public bool TryGetClaim(out Vector3 spot)
+        /// <summary>The spots this villager has claimed, as every game sees them.</summary>
+        public List<Vector3> Claims
         {
-            spot = m_nview != null && m_nview.IsValid() ? m_nview.GetZDO().GetVec3(K_Claim, Vector3.zero) : Vector3.zero;
-            return spot != Vector3.zero;
+            get
+            {
+                byte[] data = m_nview != null && m_nview.IsValid() ? m_nview.GetZDO().GetByteArray(K_Claims) : null;
+                if (data == _claimsRead) return _claimsSeen;
+                _claimsRead = data;
+                _claimsSeen.Clear();
+                if (data == null || data.Length == 0) return _claimsSeen;
+                ZPackage pkg = new ZPackage(data);
+                int n = pkg.ReadInt();
+                for (int i = 0; i < n; i++) _claimsSeen.Add(pkg.ReadVector3());
+                return _claimsSeen;
+            }
         }
 
         /// <summary>
@@ -395,10 +420,9 @@ namespace VillageWorkers
         {
             foreach (WorkerAI w in All)
             {
-                if (w == this || w == null || !w.TryGetClaim(out Vector3 theirs)) continue;
-                if (Utils.DistanceXZ(theirs, spot) >= dist) continue;
-                if (onlyFirst && !w.GoesBefore(this)) continue;
-                return true;
+                if (w == this || w == null || (onlyFirst && !w.GoesBefore(this))) continue;
+                foreach (Vector3 theirs in w.Claims)
+                    if (Utils.DistanceXZ(theirs, spot) < dist) return true;
             }
             return false;
         }
